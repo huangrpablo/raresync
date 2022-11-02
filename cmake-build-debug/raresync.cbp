@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="raresync"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\..\;CMake Files\..\..\;CMake Files\..\..\..\;CMake Files\..\..\..\..\;CMake Files\..\..\..\..\..\;CMake Files\..\..\..\..\..\..\;CMake Files\..\..\..\..\..\..\..\;CMake Files\..\..\..\..\..\..\..\opt\;CMake Files\..\..\..\..\..\..\..\opt\homebrew\;CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\;CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\cmake\;CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\cmake\Boost-1.79.0\;CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\cmake\boost_headers-1.79.0\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="raresync">
+				<Option output="/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/raresync" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/paulo/Documents/SP/code/repo/raresync/include"/>
+					<Add directory="/opt/homebrew/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/13.1.6/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 raresync"/>
+					<CompileFile command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="raresync/fast">
+				<Option output="/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/raresync" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/paulo/Documents/SP/code/repo/raresync/include"/>
+					<Add directory="/opt/homebrew/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/13.1.6/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 raresync/fast"/>
+					<CompileFile command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/opt/homebrew/bin/gmake -j8 -f &quot;/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/conf.h">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/core.h">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/crypto.hpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/define.h">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/network.h">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/main.cpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/src/core.cpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/../../../../../../../opt/homebrew/lib/cmake/Boost-1.79.0/BoostConfig.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\cmake\Boost-1.79.0\"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/../../../../../../../opt/homebrew/lib/cmake/Boost-1.79.0/BoostConfigVersion.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\cmake\Boost-1.79.0\"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/../../../../../../../opt/homebrew/lib/cmake/boost_headers-1.79.0/boost_headers-config-version.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\cmake\boost_headers-1.79.0\"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/../../../../../../../opt/homebrew/lib/cmake/boost_headers-1.79.0/boost_headers-config.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\..\opt\homebrew\lib\cmake\boost_headers-1.79.0\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
