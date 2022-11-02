@@ -6,9 +6,8 @@
 #define RARESYNC_CORE_H
 
 #include <utility>
-
+#include "map"
 #include "string"
-#include "http/server/server.hpp"
 #include "boost/asio.hpp"
 #include "define.h"
 #include "conf.h"
@@ -44,22 +43,19 @@ namespace raresync {
         void measure_dissemination_timer();
 
         void on_view_timer_expired();
-
         void on_dissemination_timer_expired();
 
         void broadcast_epoch_completion(int e, bsg p_sig);
-
         void broadcast_epoch_entrance(int e, bsg t_sig);
 
-        void on_epoch_completion_received(int pid, int e, bid p_bid, bsg p_sig);
+        void on_epoch_completion_received(int pid, int e, bsg p_sig);
+        void on_epoch_entrance_received(int pid, int e, bsg t_sig);
 
-        void on_epoch_entrance_receive(int pid, int e, bsg t_sig);
-
-        /* enter the first view */
+        /* enter a view */
         rs_errno advance(int view) const;
 
         /* a round-robin function */
-        int leader(int view) const { return view % int(peers_.size()) + 1; }
+        int leader(int view) const { return view % int(peer_conns_.size()) + 1; }
 
         /* check if self is the leader of this view */
         bool is_leader(int view) const { return leader(view) == id_; }
@@ -89,14 +85,10 @@ namespace raresync {
         bool started_;
 
         /* this server id */
-        int id_;
-        /* current epoch id */
-        int epoch_;
-        /* current view id */
-        int view_;
+        int id_; int epoch_; int view_;
         bsg_sptr epoch_sig_;
         /* lock of epoch, view and epoch_sig_*/
-        std::shared_mutex vmtx_;
+        std::shared_mutex vesmtx_;
 
         /* crypto fields */
         crypto_uptr crypto_;
@@ -108,22 +100,18 @@ namespace raresync {
 
         /* endpoint of this server */
         tcp::endpoint ep_;
-
         /* map of peers */
-        peer_map peers_;
-        /* lock of peers */
-        std::shared_mutex pmtx_;
+        peer_conn_map peer_conns_;
+        peer_cryt_map peer_cryts_;
+        /* lock of peer_conns */
+        std::shared_mutex pconnmtx_;
 
         /* end of server fields */
 
-
-
         /* broadcast fields */
-        typedef std::pair<bid, bsg> todo;
-
         int threshold_;
-        std::map<int, std::map<int, todo>> epoch_completed_;
-        std::shared_mutex ecmtx_;
+        std::map<int, std::map<int, bsg>> epoch_completed_;
+        std::shared_mutex ecmplmtx_;
 
 
     };

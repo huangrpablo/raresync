@@ -18,28 +18,32 @@ rs_errno raresync::core::init() {
 
     f_ = conf_->f;
 
-    auto self = conf_->servers[id_];
-    ep_ = tcp::endpoint(ip::make_address(self->address), self->port);
+    auto self = conf_->peer_confs[id_];
+    ep_ = tcp::endpoint(ip::make_address(self->address_), self->port_);
 
-    peers_ = peer_map();
-    for (auto & server : conf_->servers) {
-        peers_[server->id] = std::make_shared<peer>(
-                peer(
-                        server->id,
-                        server->address,
-                        server->port,
-                        ios_
-                        )
-                );
+    peer_conns_ = peer_conn_map();
+    peer_cryts_ = peer_cryt_map();
+
+    for (auto & peer_conf : conf_->peer_confs) {
+        peer_conns_[peer_conf->pid_] =
+                std::make_shared<peer_conn>(
+                peer_conn(peer_conf->pid_,
+                          peer_conf->address_,
+                          peer_conf->port_,ios_));
+
+        peer_cryts_[peer_conf->pid_] =
+                std::make_shared<peer_cryt>(
+                peer_cryt(peer_conf->pid_,
+                          peer_conf->bid_,
+                          peer_conf->pk_));
     }
-
 
     /* crypto */
     epoch_sig_ = nullptr;
 
     /* broadcast */
     threshold_ = 2 * f_ + 1;
-    epoch_completed_ = std::map<int, std::map<int, todo>>();
+    epoch_completed_ = std::map<int, std::map<int, bsg>>();
 
     /* asio service */
     view_duration_ = boost::asio::chrono::seconds(conf_->D + 2 * conf_->d);
@@ -55,7 +59,7 @@ rs_errno raresync::core::start() {
     started_ = true;
 
     {
-        write_lock wl(vmtx_);
+        write_lock wl(vesmtx_);
         epoch_ = 1;
         view_ = 1;
     }
@@ -94,7 +98,7 @@ void raresync::core::measure_dissemination_timer() {
 void raresync::core::on_view_timer_expired() {
     int view; int epoch;
     {
-        write_lock wl(vmtx_);
+        write_lock wl(vesmtx_);
         view = view_;
         epoch = epoch_;
 
@@ -118,6 +122,16 @@ void raresync::core::on_view_timer_expired() {
     auto msg = std::to_string(epoch);
     bsg p_sig = crypto_->share_sign(msg.c_str());
 
+    // store locally first
+    {
+        write_lock wl(ecmplmtx_);
+        if (!epoch_completed_.count(epoch))
+            epoch_completed_[epoch] = std::map<int, bsg>();
+
+        epoch_completed_[epoch][id_] = p_sig;
+    }
+
+    // broadcast to the rest
     broadcast_epoch_completion(epoch, p_sig);
 }
 
@@ -125,7 +139,7 @@ void raresync::core::on_dissemination_timer_expired() {
     int epoch;
     bsg epoch_sig;
     {
-        read_lock rv(vmtx_);
+        read_lock rv(vesmtx_);
         epoch = epoch_;
         epoch_sig = *epoch_sig_;
     }
@@ -134,7 +148,7 @@ void raresync::core::on_dissemination_timer_expired() {
 
     // reset the current view to 1
     {
-        write_lock wl(vmtx_);
+        write_lock wl(vesmtx_);
         view_ = 1;
     }
 
@@ -155,13 +169,13 @@ void raresync::core::broadcast_epoch_entrance(int e, bsg t_sig) {
 
 }
 
-void raresync::core::on_epoch_entrance_receive(int pid, int e, bsg t_sig) {
+void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
     // verify whether this t_sig is combined from 2f+1 peers
     auto msg = std::to_string(e);
     if (!crypto_->combine_verify(msg.c_str(), t_sig)) return;
 
     {
-        write_lock wv(vmtx_);
+        write_lock wv(vesmtx_);
         if (epoch_ >= e) return;
 
         epoch_ = e;
@@ -176,21 +190,24 @@ void raresync::core::on_epoch_entrance_receive(int pid, int e, bsg t_sig) {
     measure_dissemination_timer();
 }
 
-void raresync::core::on_epoch_completion_received(int pid, int e, bid p_bid, bsg p_sig) {
-    
+void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
+    // verify whether this p_sig is signed by pid
+    auto msg = std::to_string(e);
+    if (!peer_cryts_.count(pid) ||
+    !peer_cryts_[pid]->share_verify(msg.c_str(), p_sig)) return;
 
     int epoch;
     {
-        read_lock rv(vmtx_);
+        read_lock rv(vesmtx_);
         epoch = epoch_;
 
         if (epoch > e) return;
 
-        write_lock wec(ecmtx_);
+        write_lock wec(ecmplmtx_);
         if (!epoch_completed_.count(e))
-            epoch_completed_[e] = std::map<int, todo>();
+            epoch_completed_[e] = std::map<int, bsg>();
 
-        epoch_completed_[e][pid] = todo(p_bid, p_sig);
+        epoch_completed_[e][pid] = p_sig;
     }
 
     int new_epoch;
@@ -198,7 +215,7 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bid p_bid, bsg
     bool found = false;
 
     {
-        read_lock rec(ecmtx_);
+        read_lock rec(ecmplmtx_);
         for (auto & it : epoch_completed_) {
             if (
                     it.first < epoch ||
@@ -206,17 +223,17 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bid p_bid, bsg
             )
                 continue;
 
-            std::vector<bid> pids(threshold_);
-            std::vector<bsg> sigs(threshold_);
+            std::vector<bid> ids(threshold_);
+            std::vector<bsg> sgs(threshold_);
 
             auto iit = it.second.begin();
             for (int i = 0; i < threshold_; i++, iit++) {
-                pids[i] = iit->second.first;
-                sigs[i] = iit->second.second;
+                ids[i] = peer_cryts_[iit->first]->id;
+                sgs[i] = iit->second;
             }
 
             new_epoch = it.first + 1;
-            new_epoch_sig = crypto_->combine(pids, sigs, threshold_);
+            new_epoch_sig = crypto_->combine(ids, sgs, threshold_);
             found = true;
             break;
         }
@@ -225,7 +242,7 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bid p_bid, bsg
     if (!found) return;
 
     {
-        write_lock wv(vmtx_);
+        write_lock wv(vesmtx_);
         epoch_ = new_epoch;
         *epoch_sig_ = new_epoch_sig;
     }

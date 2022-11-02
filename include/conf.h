@@ -6,16 +6,23 @@
 #define RARESYNC_CONF_H
 
 #include "string"
+#include "crypto.hpp"
 
 
 namespace raresync {
-    struct server {
-        int id;
-        std::string address;
-        int port;
+    struct peer_conf {
+        int pid_; // peer id
+
+        /* network */
+        std::string address_; // peer address
+        int port_; // peer port
+
+        /* crypto */
+        bid bid_;
+        bpk pk_;
     };
 
-    typedef std::shared_ptr<server> server_sptr;
+    typedef std::shared_ptr<peer_conf> peer_conf_sptr;
 
     struct conf {
         /* view duration: D + 2d */
@@ -24,7 +31,7 @@ namespace raresync {
         /* # of nodes can fail */
         int f;
 
-        std::vector<server_sptr> servers;
+        std::vector<peer_conf_sptr> peer_confs;
     };
 
     typedef std::unique_ptr<conf> conf_uptr;

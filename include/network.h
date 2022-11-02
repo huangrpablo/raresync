@@ -13,10 +13,10 @@ using net_error = boost::system::error_code;
 
 namespace raresync {
 
-    class peer {
+    class peer_conn {
     public:
-        peer(int id, const std::string& address, int port, io_service& ios) :
-        id_(id), ep_(tcp::endpoint(ip::make_address(address), port)), socket_(ios) {}
+        peer_conn(int pid, const std::string& address, int port, io_service& ios) :
+                pid_(pid), ep_(tcp::endpoint(ip::make_address(address), port)), socket_(ios) {}
 
     public:
         void on_connect(net_error error) {
@@ -24,13 +24,13 @@ namespace raresync {
         }
 
     private:
-        int id_;
+        int pid_;
         tcp::endpoint ep_;
         tcp::socket socket_;
     };
 
-    typedef std::shared_ptr<peer> peer_sptr;
-    typedef std::map<int, peer_sptr> peer_map;
+    typedef std::shared_ptr<peer_conn> peer_conn_sptr;
+    typedef std::map<int, peer_conn_sptr> peer_conn_map;
 
 
 }

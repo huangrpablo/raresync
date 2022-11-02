@@ -21,6 +21,23 @@ namespace raresync {
 
     typedef std::shared_ptr<bsg> bsg_sptr;
 
+    struct peer_cryt {
+        int pid;
+        bid id;
+        bpk pk;
+
+        peer_cryt(int pid, bid id, bpk pk) : pid(pid), id(id), pk(pk) {}
+
+        bool share_verify(const char* msg, const bsg& sg) const {
+            assert(msg != nullptr);
+
+            return blsVerify(&sg, &pk, msg, strlen(msg));
+        }
+    };
+
+    typedef std::shared_ptr<peer_cryt> peer_cryt_sptr;
+    typedef std::map<int, peer_cryt_sptr> peer_cryt_map;
+
     struct crypto {
         bid id;
         bsk sk;
