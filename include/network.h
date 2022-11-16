@@ -33,7 +33,7 @@ namespace raresync::network {
 
             // send to remote peers
             // each message has a to field, corresponding the target peer id
-            virtual void send(std::vector<proto::message_sptr> msgs) = 0;
+            virtual void send(std::vector<proto::message_sptr>& msgs) = 0;
 
             virtual void add_peer(int pid, const std::string& address, int port) = 0;
 

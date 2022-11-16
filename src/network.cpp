@@ -33,7 +33,7 @@ namespace raresync::network {
             ios_.stop();
         }
 
-        void send(std::vector<proto::message_sptr> msgs) final {
+        void send(std::vector<proto::message_sptr>& msgs) final {
             auto task = [this](const std::vector<proto::message_sptr>& msgs) {
                 if (msgs.empty()) return;
                 for (const auto& msg : msgs) {

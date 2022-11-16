@@ -28,6 +28,9 @@ rs_errno raresync::core::init() {
                 peer_cryt(peer_conf->pid_,
                           peer_conf->bid_,
                           peer_conf->pk_));
+
+        if (peer_conf->pid_ != id_)
+            peer_ids_.push_back(peer_conf->pid_);
     }
 
     /* crypto */
@@ -161,13 +164,30 @@ void raresync::core::on_dissemination_timer_expired() {
     advance(view_to_advance);
 }
 
-void raresync::core::broadcast_epoch_completion(int e, bsg p_sig) {
+void raresync::core::broadcast(proto::msg_type type, int e, bsg sig) {
+    std::vector<proto::message_sptr> msgs(peer_ids_.size());
+    for (int i = 0; i < peer_ids_.size(); i++) {
+        auto msg = std::make_shared<proto::message>();
+        msg->type = type;
+        msg->to = peer_ids_[i];
+        msg->from = id_;
+        msg->epoch = e;
+        msg->sig = sig;
 
+        msgs[i] = msg;
+    }
+
+    net_->send(msgs);
+}
+
+void raresync::core::broadcast_epoch_completion(int e, bsg p_sig) {
+    broadcast(proto::EPOCH_COMPLETION, e, p_sig);
 }
 
 void raresync::core::broadcast_epoch_entrance(int e, bsg t_sig) {
-
+    broadcast(proto::EPOCH_ENTRANCE, e, t_sig);
 }
+
 
 void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
     // verify whether this t_sig is combined from 2f+1 peers

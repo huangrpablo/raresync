@@ -48,6 +48,7 @@ class core : public network::callback, std::enable_shared_from_this<core> {
         void on_view_timer_expired();
         void on_dissemination_timer_expired();
 
+        void broadcast(proto::msg_type type, int e, bsg sig);
         void broadcast_epoch_completion(int e, bsg p_sig);
         void broadcast_epoch_entrance(int e, bsg t_sig);
 
@@ -101,6 +102,7 @@ class core : public network::callback, std::enable_shared_from_this<core> {
         int f_;
 
         peer_cryt_map peer_cryts_;
+        vector<int> peer_ids_;
 
         /* end of server fields */
 
