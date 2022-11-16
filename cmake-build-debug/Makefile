@@ -177,6 +177,78 @@ src/core.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/core.cpp.s
 .PHONY : src/core.cpp.s
 
+src/network.o: src/network.cpp.o
+.PHONY : src/network.o
+
+# target to build an object file
+src/network.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network.cpp.o
+.PHONY : src/network.cpp.o
+
+src/network.i: src/network.cpp.i
+.PHONY : src/network.i
+
+# target to preprocess a source file
+src/network.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network.cpp.i
+.PHONY : src/network.cpp.i
+
+src/network.s: src/network.cpp.s
+.PHONY : src/network.s
+
+# target to generate assembly for a file
+src/network.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network.cpp.s
+.PHONY : src/network.cpp.s
+
+src/network_peer.o: src/network_peer.cpp.o
+.PHONY : src/network_peer.o
+
+# target to build an object file
+src/network_peer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network_peer.cpp.o
+.PHONY : src/network_peer.cpp.o
+
+src/network_peer.i: src/network_peer.cpp.i
+.PHONY : src/network_peer.i
+
+# target to preprocess a source file
+src/network_peer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network_peer.cpp.i
+.PHONY : src/network_peer.cpp.i
+
+src/network_peer.s: src/network_peer.cpp.s
+.PHONY : src/network_peer.s
+
+# target to generate assembly for a file
+src/network_peer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network_peer.cpp.s
+.PHONY : src/network_peer.cpp.s
+
+src/network_server.o: src/network_server.cpp.o
+.PHONY : src/network_server.o
+
+# target to build an object file
+src/network_server.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network_server.cpp.o
+.PHONY : src/network_server.cpp.o
+
+src/network_server.i: src/network_server.cpp.i
+.PHONY : src/network_server.i
+
+# target to preprocess a source file
+src/network_server.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network_server.cpp.i
+.PHONY : src/network_server.cpp.i
+
+src/network_server.s: src/network_server.cpp.s
+.PHONY : src/network_server.s
+
+# target to generate assembly for a file
+src/network_server.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/src/network_server.cpp.s
+.PHONY : src/network_server.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -192,6 +264,15 @@ help:
 	@echo "... src/core.o"
 	@echo "... src/core.i"
 	@echo "... src/core.s"
+	@echo "... src/network.o"
+	@echo "... src/network.i"
+	@echo "... src/network.s"
+	@echo "... src/network_peer.o"
+	@echo "... src/network_peer.i"
+	@echo "... src/network_peer.s"
+	@echo "... src/network_server.o"
+	@echo "... src/network_server.i"
+	@echo "... src/network_server.s"
 .PHONY : help
 
 

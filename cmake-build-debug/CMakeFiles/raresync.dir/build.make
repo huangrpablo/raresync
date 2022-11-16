@@ -92,20 +92,65 @@ CMakeFiles/raresync.dir/src/core.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/raresync.dir/src/core.cpp.s"
 	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/paulo/Documents/SP/code/repo/raresync/src/core.cpp -o CMakeFiles/raresync.dir/src/core.cpp.s
 
+CMakeFiles/raresync.dir/src/network.cpp.o: CMakeFiles/raresync.dir/flags.make
+CMakeFiles/raresync.dir/src/network.cpp.o: ../src/network.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/raresync.dir/src/network.cpp.o"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/raresync.dir/src/network.cpp.o -c /Users/paulo/Documents/SP/code/repo/raresync/src/network.cpp
+
+CMakeFiles/raresync.dir/src/network.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/raresync.dir/src/network.cpp.i"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/paulo/Documents/SP/code/repo/raresync/src/network.cpp > CMakeFiles/raresync.dir/src/network.cpp.i
+
+CMakeFiles/raresync.dir/src/network.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/raresync.dir/src/network.cpp.s"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/paulo/Documents/SP/code/repo/raresync/src/network.cpp -o CMakeFiles/raresync.dir/src/network.cpp.s
+
+CMakeFiles/raresync.dir/src/network_peer.cpp.o: CMakeFiles/raresync.dir/flags.make
+CMakeFiles/raresync.dir/src/network_peer.cpp.o: ../src/network_peer.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/raresync.dir/src/network_peer.cpp.o"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/raresync.dir/src/network_peer.cpp.o -c /Users/paulo/Documents/SP/code/repo/raresync/src/network_peer.cpp
+
+CMakeFiles/raresync.dir/src/network_peer.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/raresync.dir/src/network_peer.cpp.i"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/paulo/Documents/SP/code/repo/raresync/src/network_peer.cpp > CMakeFiles/raresync.dir/src/network_peer.cpp.i
+
+CMakeFiles/raresync.dir/src/network_peer.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/raresync.dir/src/network_peer.cpp.s"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/paulo/Documents/SP/code/repo/raresync/src/network_peer.cpp -o CMakeFiles/raresync.dir/src/network_peer.cpp.s
+
+CMakeFiles/raresync.dir/src/network_server.cpp.o: CMakeFiles/raresync.dir/flags.make
+CMakeFiles/raresync.dir/src/network_server.cpp.o: ../src/network_server.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/raresync.dir/src/network_server.cpp.o"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/raresync.dir/src/network_server.cpp.o -c /Users/paulo/Documents/SP/code/repo/raresync/src/network_server.cpp
+
+CMakeFiles/raresync.dir/src/network_server.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/raresync.dir/src/network_server.cpp.i"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/paulo/Documents/SP/code/repo/raresync/src/network_server.cpp > CMakeFiles/raresync.dir/src/network_server.cpp.i
+
+CMakeFiles/raresync.dir/src/network_server.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/raresync.dir/src/network_server.cpp.s"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/paulo/Documents/SP/code/repo/raresync/src/network_server.cpp -o CMakeFiles/raresync.dir/src/network_server.cpp.s
+
 # Object files for target raresync
 raresync_OBJECTS = \
 "CMakeFiles/raresync.dir/main.cpp.o" \
-"CMakeFiles/raresync.dir/src/core.cpp.o"
+"CMakeFiles/raresync.dir/src/core.cpp.o" \
+"CMakeFiles/raresync.dir/src/network.cpp.o" \
+"CMakeFiles/raresync.dir/src/network_peer.cpp.o" \
+"CMakeFiles/raresync.dir/src/network_server.cpp.o"
 
 # External object files for target raresync
 raresync_EXTERNAL_OBJECTS =
 
 raresync: CMakeFiles/raresync.dir/main.cpp.o
 raresync: CMakeFiles/raresync.dir/src/core.cpp.o
+raresync: CMakeFiles/raresync.dir/src/network.cpp.o
+raresync: CMakeFiles/raresync.dir/src/network_peer.cpp.o
+raresync: CMakeFiles/raresync.dir/src/network_server.cpp.o
 raresync: CMakeFiles/raresync.dir/build.make
 raresync: ../lib/libbls384_256.a
 raresync: CMakeFiles/raresync.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable raresync"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable raresync"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/raresync.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

@@ -6,33 +6,67 @@
 #define RARESYNC_NETWORK_H
 
 #include "boost/asio.hpp"
+#include "map"
+#include "proto.h"
 
 using namespace boost::asio;
-using boost::asio::ip::tcp;
-using net_error = boost::system::error_code;
 
-namespace raresync {
+namespace raresync::network {
+        class callback {
+        public:
+            virtual ~callback() = default;
 
-    class peer_conn {
-    public:
-        peer_conn(int pid, const std::string& address, int port, io_service& ios) :
-                pid_(pid), ep_(tcp::endpoint(ip::make_address(address), port)), socket_(ios) {}
+            virtual void on_epoch_completion_received(int pid, int e, bsg p_sig) = 0;
+            virtual void on_epoch_entrance_received(int pid, int e, bsg t_sig) = 0;
+        };
 
-    public:
-        void on_connect(net_error error) {
+        typedef std::shared_ptr<callback> callback_sptr;
 
-        }
+        /* network manages a receiver and multiple senders */
+        class network {
+        public:
+            virtual ~network() = default;
 
-    private:
-        int pid_;
-        tcp::endpoint ep_;
-        tcp::socket socket_;
-    };
+            virtual void start(const std::string& address, int port) = 0;
 
-    typedef std::shared_ptr<peer_conn> peer_conn_sptr;
-    typedef std::map<int, peer_conn_sptr> peer_conn_map;
+            virtual void stop() = 0;
 
+            // send to remote peers
+            // each message has a to field, corresponding the target peer id
+            virtual void send(std::vector<proto::message_sptr> msgs) = 0;
 
-}
+            virtual void add_peer(int pid, const std::string& address, int port) = 0;
+
+            virtual void remove_peer(int pid) = 0;
+
+            static std::shared_ptr<network> create(callback_sptr cb, int id);
+        };
+
+        typedef std::shared_ptr<network> network_sptr;
+
+        /* peer defines a sender */
+        class peer {
+        public:
+            virtual ~peer() = default;
+            virtual void start() = 0;
+            virtual void send(proto::message_sptr msg) = 0;
+            virtual void stop() = 0;
+            virtual bool active() = 0;
+
+            static std::shared_ptr<peer> create(int pid, const std::string& address, int port, io_service& ios);
+        };
+
+        typedef std::shared_ptr<peer> peer_sptr;
+
+        class server {
+        public:
+            virtual void start() = 0;
+            virtual void stop() = 0;
+
+            static std::shared_ptr<server> create(const std::string& address, int port, io_service& ios, callback_sptr cb);
+        };
+
+        typedef std::shared_ptr<server> server_sptr;
+    }
 
 #endif //RARESYNC_NETWORK_H

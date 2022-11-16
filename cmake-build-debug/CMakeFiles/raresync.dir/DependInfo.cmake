@@ -10,6 +10,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_CHECK_CXX
   "/Users/paulo/Documents/SP/code/repo/raresync/main.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/main.cpp.o"
   "/Users/paulo/Documents/SP/code/repo/raresync/src/core.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/src/core.cpp.o"
+  "/Users/paulo/Documents/SP/code/repo/raresync/src/network.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/src/network.cpp.o"
+  "/Users/paulo/Documents/SP/code/repo/raresync/src/network_peer.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/src/network_peer.cpp.o"
+  "/Users/paulo/Documents/SP/code/repo/raresync/src/network_server.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/src/network_server.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "AppleClang")
 

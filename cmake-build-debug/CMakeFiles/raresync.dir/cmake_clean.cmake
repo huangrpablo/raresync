@@ -1,6 +1,9 @@
 file(REMOVE_RECURSE
   "CMakeFiles/raresync.dir/main.cpp.o"
   "CMakeFiles/raresync.dir/src/core.cpp.o"
+  "CMakeFiles/raresync.dir/src/network.cpp.o"
+  "CMakeFiles/raresync.dir/src/network_peer.cpp.o"
+  "CMakeFiles/raresync.dir/src/network_server.cpp.o"
   "raresync"
   "raresync.pdb"
 )

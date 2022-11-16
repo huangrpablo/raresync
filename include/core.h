@@ -18,9 +18,9 @@ namespace raresync {
 
     typedef std::unique_ptr<boost::asio::io_service::work> ios_work_uptr;
 
-    class core {
+class core : public network::callback, std::enable_shared_from_this<core> {
     public:
-        core(int id, conf conf, crypto crypto) :
+        core(int id, conf conf, crypto_kit crypto) :
         id_(id), conf_(&conf), crypto_(&crypto),
         work_(new boost::asio::io_service::work(ios_)),
         view_timer_(ios_),
@@ -37,6 +37,9 @@ namespace raresync {
         /* stop the raresync protocol */
         rs_errno stop();
 
+        void on_epoch_completion_received(int pid, int e, bsg p_sig);
+        void on_epoch_entrance_received(int pid, int e, bsg t_sig);
+
     private:
 
         void measure_view_timer();
@@ -48,14 +51,13 @@ namespace raresync {
         void broadcast_epoch_completion(int e, bsg p_sig);
         void broadcast_epoch_entrance(int e, bsg t_sig);
 
-        void on_epoch_completion_received(int pid, int e, bsg p_sig);
-        void on_epoch_entrance_received(int pid, int e, bsg t_sig);
+        void collect_garbage(int e); // release all older than e
 
         /* enter a view */
         rs_errno advance(int view) const;
 
         /* a round-robin function */
-        int leader(int view) const { return view % int(peer_conns_.size()) + 1; }
+        int leader(int view) const { return view % int(peer_cryts_.size()) + 1; }
 
         /* check if self is the leader of this view */
         bool is_leader(int view) const { return leader(view) == id_; }
@@ -98,13 +100,7 @@ namespace raresync {
         /* # of nodes can fail */
         int f_;
 
-        /* endpoint of this server */
-        tcp::endpoint ep_;
-        /* map of peers */
-        peer_conn_map peer_conns_;
         peer_cryt_map peer_cryts_;
-        /* lock of peer_conns */
-        std::shared_mutex pconnmtx_;
 
         /* end of server fields */
 
@@ -113,7 +109,7 @@ namespace raresync {
         std::map<int, std::map<int, bsg>> epoch_completed_;
         std::shared_mutex ecmplmtx_;
 
-
+        network::network_sptr net_;
     };
 
 }

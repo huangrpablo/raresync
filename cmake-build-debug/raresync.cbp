@@ -99,10 +99,22 @@
 		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/network.h">
 			<Option target="raresync"/>
 		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/proto.h">
+			<Option target="raresync"/>
+		</Unit>
 		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/main.cpp">
 			<Option target="raresync"/>
 		</Unit>
 		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/src/core.cpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/src/network.cpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/src/network_peer.cpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/src/network_server.cpp">
 			<Option target="raresync"/>
 		</Unit>
 		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/CMakeLists.txt">

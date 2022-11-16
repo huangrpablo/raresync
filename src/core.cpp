@@ -18,19 +18,11 @@ rs_errno raresync::core::init() {
 
     f_ = conf_->f;
 
-    auto self = conf_->peer_confs[id_];
-    ep_ = tcp::endpoint(ip::make_address(self->address_), self->port_);
+    auto self_conf = conf_->peer_confs[id_];
 
-    peer_conns_ = peer_conn_map();
     peer_cryts_ = peer_cryt_map();
 
     for (auto & peer_conf : conf_->peer_confs) {
-        peer_conns_[peer_conf->pid_] =
-                std::make_shared<peer_conn>(
-                peer_conn(peer_conf->pid_,
-                          peer_conf->address_,
-                          peer_conf->port_,ios_));
-
         peer_cryts_[peer_conf->pid_] =
                 std::make_shared<peer_cryt>(
                 peer_cryt(peer_conf->pid_,
@@ -45,12 +37,20 @@ rs_errno raresync::core::init() {
     threshold_ = 2 * f_ + 1;
     epoch_completed_ = std::map<int, std::map<int, bsg>>();
 
+    net_ = network::network::create(shared_from_this(), id_);
+    net_->start(self_conf->address_, self_conf->port_);
+
+    for (auto & peer_conf : conf_->peer_confs) {
+        net_->add_peer(
+                peer_conf->pid_,
+                peer_conf->address_,
+                peer_conf->port_
+                );
+    }
+
     /* asio service */
     view_duration_ = boost::asio::chrono::seconds(conf_->D + 2 * conf_->d);
     dissemination_duration_ = boost::asio::chrono::seconds(conf_->d);
-
-    // do something with tcp
-    // listen on connection
 }
 
 rs_errno raresync::core::start() {
@@ -216,6 +216,7 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
 
     {
         read_lock rec(ecmplmtx_);
+
         for (auto & it : epoch_completed_) {
             if (
                     it.first < epoch ||
@@ -251,4 +252,20 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
     dissemination_timer_.cancel();
     // wait δ time before broadcasting enter-epoch
     measure_dissemination_timer();
+}
+
+void raresync::core::collect_garbage(int e) {
+    // erase old epochs in epoch_completed list
+    {
+        write_lock wl(ecmplmtx_);
+        std::vector<int> obsoletes;
+
+        for (auto & it : epoch_completed_) {
+            if (it.first < e)
+                obsoletes.push_back(it.first);
+        }
+
+        for (auto obsolete : obsoletes)
+            epoch_completed_.erase(obsolete);
+    }
 }

@@ -38,7 +38,7 @@ namespace raresync {
     typedef std::shared_ptr<peer_cryt> peer_cryt_sptr;
     typedef std::map<int, peer_cryt_sptr> peer_cryt_map;
 
-    struct crypto {
+    struct crypto_kit {
         bid id;
         bsk sk;
         bpk pk;
@@ -74,7 +74,7 @@ namespace raresync {
         }
     };
 
-    typedef std::unique_ptr<crypto> crypto_uptr;
+    typedef std::unique_ptr<crypto_kit> crypto_uptr;
     typedef std::vector<crypto_uptr> crypto_list;
 
     class crypto_factory {
@@ -129,7 +129,7 @@ namespace raresync {
 
             crypto_list cryptos(N_);
             for (int i = 0; i < N_; i++) {
-                cryptos[i] = std::make_unique<crypto>(crypto{
+                cryptos[i] = std::make_unique<crypto_kit>(crypto_kit{
                     bids[i],
                     sks[i],
                     pks[i],
