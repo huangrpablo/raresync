@@ -1,7 +1,7 @@
 //
 // Created by 黄保罗 on 29.10.22.
 //
-
+#pragma once
 #ifndef RARESYNC_CORE_H
 #define RARESYNC_CORE_H
 
@@ -11,34 +11,38 @@
 #include "boost/asio.hpp"
 #include "define.h"
 #include "conf.h"
-#include "crypto.hpp"
 #include "network.h"
 
 namespace raresync {
 
     typedef std::unique_ptr<boost::asio::io_service::work> ios_work_uptr;
 
-class core : public network::callback, std::enable_shared_from_this<core> {
+class core : public network::callback {
     public:
-        core(int id, conf conf, crypto_kit crypto) :
-        id_(id), conf_(&conf), crypto_(&crypto),
+        core(int id, conf* conf, crypto_kit* crypto) :
+        id_(id), conf_(conf), crypto_(crypto),
         work_(new boost::asio::io_service::work(ios_)),
         view_timer_(ios_),
         dissemination_timer_(ios_),
         inited_(false),
         started_(false) {}
 
-        /* initialize the raresync protocol, configurations, timers*/
-        rs_errno init();
+
+/* initialize the raresync protocol, configurations, timers*/
+        void init();
 
         /* start the raresync protocol */
-        rs_errno start();
+        void start();
 
         /* stop the raresync protocol */
-        rs_errno stop();
+        void stop();
 
         void on_epoch_completion_received(int pid, int e, bsg p_sig);
         void on_epoch_entrance_received(int pid, int e, bsg t_sig);
+
+    public:
+        /* other configuration */
+        bool gc = true;
 
     private:
 
@@ -89,7 +93,7 @@ class core : public network::callback, std::enable_shared_from_this<core> {
 
         /* this server id */
         int id_; int epoch_; int view_;
-        bsg_sptr epoch_sig_;
+        bsg epoch_sig_;
         /* lock of epoch, view and epoch_sig_*/
         std::shared_mutex vesmtx_;
 
@@ -112,8 +116,15 @@ class core : public network::callback, std::enable_shared_from_this<core> {
         std::shared_mutex ecmplmtx_;
 
         network::network_sptr net_;
+
+
     };
 
+    typedef std::shared_ptr<core> core_sptr;
+
+    static core_sptr create(int id, conf* conf, crypto_kit* crypto) {
+        return std::make_shared<core>(id, conf, crypto);
+    }
 }
 
 #endif //RARESYNC_CORE_H

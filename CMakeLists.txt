@@ -3,10 +3,9 @@ project(raresync)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(raresync main.cpp include/core.h include/define.h include/conf.h include/crypto.hpp src/core.cpp include/network.h src/network.cpp include/proto.h src/network_peer.cpp src/network_server.cpp)
-
 include_directories(include)
 
+add_executable(raresync main.cpp src/core.cpp src/network.cpp src/network_peer.cpp src/network_server.cpp)
 
 find_library(BLS bls384_256 lib)
 

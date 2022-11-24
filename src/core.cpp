@@ -3,16 +3,15 @@
 //
 
 #include "core.h"
-#include "define.h"
-#include <iostream>
 #include <memory>
 #include "boost/asio.hpp"
+#include "log.h"
 
 using namespace boost::asio;
 using timer_error = boost::system::error_code;
 
-rs_errno raresync::core::init() {
-    if (inited_) return GOOD;
+void raresync::core::init() {
+    if (inited_) return;
 
     inited_ = true;
 
@@ -34,21 +33,21 @@ rs_errno raresync::core::init() {
     }
 
     /* crypto */
-    epoch_sig_ = nullptr;
 
     /* broadcast */
     threshold_ = 2 * f_ + 1;
     epoch_completed_ = std::map<int, std::map<int, bsg>>();
 
-    net_ = network::network::create(shared_from_this(), id_);
+    net_ = network::network::create(this, id_);
     net_->start(self_conf->address_, self_conf->port_);
 
     for (auto & peer_conf : conf_->peer_confs) {
-        net_->add_peer(
-                peer_conf->pid_,
-                peer_conf->address_,
-                peer_conf->port_
-                );
+        if (peer_conf->pid_ != id_)
+            net_->add_peer(
+                    peer_conf->pid_,
+                    peer_conf->address_,
+                    peer_conf->port_
+                    );
     }
 
     /* asio service */
@@ -56,8 +55,8 @@ rs_errno raresync::core::init() {
     dissemination_duration_ = boost::asio::chrono::seconds(conf_->d);
 }
 
-rs_errno raresync::core::start() {
-    if (started_) return GOOD;
+void raresync::core::start() {
+    if (started_) return;
 
     started_ = true;
 
@@ -66,6 +65,8 @@ rs_errno raresync::core::start() {
         epoch_ = 1;
         view_ = 1;
     }
+
+    LOG_INFO("core[%d] starts: epoch=%d, view=%d", id_, 1, 1);
 
     /* run asio service */
 
@@ -76,11 +77,17 @@ rs_errno raresync::core::start() {
     /* enter the view */
     // enter the first view
     advance(1);
+    ios_.run();
+}
+
+void raresync::core::stop() {
+
 }
 
 rs_errno raresync::core::advance(int view) const {
     // do something
-    std::cout << id_ << " advances " << view << std::endl;
+    LOG_INFO("core[%d] advances epoch=%d, view=%d", id_, epoch_, view);
+
     return GOOD;
 }
 
@@ -89,6 +96,8 @@ void raresync::core::measure_view_timer() {
     view_timer_.async_wait([this](const timer_error &e) {
         on_view_timer_expired();
     });
+
+    LOG_INFO("core[%d] measures a view timer", id_);
 }
 
 void raresync::core::measure_dissemination_timer() {
@@ -96,9 +105,13 @@ void raresync::core::measure_dissemination_timer() {
     dissemination_timer_.async_wait([this](const timer_error &e) {
         on_dissemination_timer_expired();
     });
+
+    LOG_INFO("core[%d] measures a dissemination timer", id_);
 }
 
 void raresync::core::on_view_timer_expired() {
+    LOG_INFO("core[%d] view timer expired", id_);
+
     int view; int epoch;
     {
         write_lock wl(vesmtx_);
@@ -111,7 +124,7 @@ void raresync::core::on_view_timer_expired() {
 
     // check if the current view is not the last view of the current epoch
     if (view < f_ + 1) {
-        int view_to_advance = (epoch - 1) * (f_ + 1) + view;
+        int view_to_advance = (epoch - 1) * (f_ + 1) + (view+1);
 
         // measure the duration of the view
         measure_view_timer();
@@ -139,12 +152,14 @@ void raresync::core::on_view_timer_expired() {
 }
 
 void raresync::core::on_dissemination_timer_expired() {
+    LOG_INFO("core[%d] dissemination timer expired", id_);
+
     int epoch;
     bsg epoch_sig;
     {
         read_lock rv(vesmtx_);
         epoch = epoch_;
-        epoch_sig = *epoch_sig_;
+        epoch_sig = epoch_sig_;
     }
 
     broadcast_epoch_entrance(epoch, epoch_sig);
@@ -165,31 +180,41 @@ void raresync::core::on_dissemination_timer_expired() {
 }
 
 void raresync::core::broadcast(proto::msg_type type, int e, bsg sig) {
-    std::vector<proto::message_sptr> msgs(peer_ids_.size());
+    auto sig_hex = serialize(sig);
+
+    std::vector<proto::message*> msgs(peer_ids_.size());
     for (int i = 0; i < peer_ids_.size(); i++) {
-        auto msg = std::make_shared<proto::message>();
+        auto msg = new proto::message();
         msg->type = type;
         msg->to = peer_ids_[i];
         msg->from = id_;
         msg->epoch = e;
-        msg->sig = sig;
+        msg->sig_sz = sig_hex.size();
+        msg->sig_hex = sig_hex;
 
         msgs[i] = msg;
     }
 
+    LOG_DEBUG("code[%d] ready to sends", id_);
     net_->send(msgs);
 }
 
 void raresync::core::broadcast_epoch_completion(int e, bsg p_sig) {
+    LOG_INFO("core[%d] broadcasts EPOCH_COMPLETION: epoch=%d", id_, e);
+
     broadcast(proto::EPOCH_COMPLETION, e, p_sig);
 }
 
 void raresync::core::broadcast_epoch_entrance(int e, bsg t_sig) {
+    LOG_INFO("core[%d] broadcasts EPOCH_ENTRANCE: epoch=%d", id_, e);
+
     broadcast(proto::EPOCH_ENTRANCE, e, t_sig);
 }
 
 
 void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
+    LOG_INFO("core[%d] receives EPOCH_ENTRANCE: pid=%d, epoch=%d", pid, id_, e);
+
     // verify whether this t_sig is combined from 2f+1 peers
     auto msg = std::to_string(e);
     if (!crypto_->combine_verify(msg.c_str(), t_sig)) return;
@@ -200,7 +225,7 @@ void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
 
         epoch_ = e;
         // t_sig is a threshold signature of epoch e − 1
-        *epoch_sig_ = t_sig;
+        epoch_sig_ = t_sig;
     }
 
     view_timer_.cancel();
@@ -211,10 +236,15 @@ void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
 }
 
 void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
+    LOG_INFO("core[%d] receives EPOCH_COMPLETION: pid=%d, epoch=%d", pid, id_, e);
+
     // verify whether this p_sig is signed by pid
     auto msg = std::to_string(e);
     if (!peer_cryts_.count(pid) ||
-    !peer_cryts_[pid]->share_verify(msg.c_str(), p_sig)) return;
+    !peer_cryts_[pid]->share_verify(msg.c_str(), p_sig)) {
+        LOG_INFO("verify signature fails");
+        return;
+    }
 
     int epoch;
     {
@@ -222,7 +252,9 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
         epoch = epoch_;
 
         if (epoch > e) return;
+    }
 
+    {
         write_lock wec(ecmplmtx_);
         if (!epoch_completed_.count(e))
             epoch_completed_[e] = std::map<int, bsg>();
@@ -253,6 +285,8 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
                 sgs[i] = iit->second;
             }
 
+            LOG_INFO("core[%d] collects {EPOCH_COMPLETION}{%d} from %d peers", id_, it.first, it.second.size());
+
             new_epoch = it.first + 1;
             new_epoch_sig = crypto_->combine(ids, sgs, threshold_);
             found = true;
@@ -265,8 +299,10 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
     {
         write_lock wv(vesmtx_);
         epoch_ = new_epoch;
-        *epoch_sig_ = new_epoch_sig;
+        epoch_sig_ = new_epoch_sig;
     }
+
+    if (gc) collect_garbage(new_epoch);
 
     view_timer_.cancel();
     dissemination_timer_.cancel();

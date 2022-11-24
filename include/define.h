@@ -1,7 +1,7 @@
 //
 // Created by 黄保罗 on 29.10.22.
 //
-
+#pragma once
 #ifndef RARESYNC_DEFINE_H
 #define RARESYNC_DEFINE_H
 

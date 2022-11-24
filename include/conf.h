@@ -1,13 +1,16 @@
 //
 // Created by 黄保罗 on 29.10.22.
 //
-
+#pragma once
 #ifndef RARESYNC_CONF_H
 #define RARESYNC_CONF_H
 
-#include "string"
-#include "crypto.hpp"
 
+#include "string"
+#include "crypto.h"
+#include "vector"
+
+using namespace std;
 
 namespace raresync {
     struct peer_conf {
@@ -35,6 +38,7 @@ namespace raresync {
     };
 
     typedef std::unique_ptr<conf> conf_uptr;
+
 }
 
 #endif //RARESYNC_CONF_H

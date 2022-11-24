@@ -1,15 +1,17 @@
 //
 // Created by 黄保罗 on 29.10.22.
 //
+#pragma once
+#ifndef RARESYNC_CRYPTO_H
+#define RARESYNC_CRYPTO_H
 
-#ifndef RARESYNC_CRYPTO_HPP
-#define RARESYNC_CRYPTO_HPP
 
 #define BLS_ETH
 #include <bls/bls384_256.h>
 #include <cassert>
 #include "vector"
 #include "iostream"
+#include "unordered_map"
 
 using namespace std;
 
@@ -18,8 +20,6 @@ namespace raresync {
     typedef blsSecretKey bsk;
     typedef blsSignature bsg;
     typedef blsId bid;
-
-    typedef std::shared_ptr<bsg> bsg_sptr;
 
     struct peer_cryt {
         int pid;
@@ -36,7 +36,7 @@ namespace raresync {
     };
 
     typedef std::shared_ptr<peer_cryt> peer_cryt_sptr;
-    typedef std::map<int, peer_cryt_sptr> peer_cryt_map;
+    typedef std::unordered_map<int, peer_cryt_sptr> peer_cryt_map;
 
     struct crypto_kit {
         bid id;
@@ -72,10 +72,27 @@ namespace raresync {
 
             return blsVerify(&combined, &mpk, msg, strlen(msg));
         }
+
+
     };
 
+    static vector<byte> serialize(bsg sig) {
+        byte buf[128];
+        auto sig_sz = blsSignatureSerialize(buf, 128, &sig);
+        vector<byte> v; v.reserve(sig_sz);
+        for (int i = 0; i < sig_sz; i++) v.push_back(buf[i]);
+
+        return v;
+    }
+
+    static bsg deserialize(byte* v, size_t sz) {
+        bsg sig;
+        blsSignatureDeserialize(&sig, v, sz);
+        return sig;
+    }
+
     typedef std::unique_ptr<crypto_kit> crypto_uptr;
-    typedef std::vector<crypto_uptr> crypto_list;
+    typedef std::vector<crypto_kit*> crypto_list;
 
     class crypto_factory {
     public:
@@ -129,12 +146,12 @@ namespace raresync {
 
             crypto_list cryptos(N_);
             for (int i = 0; i < N_; i++) {
-                cryptos[i] = std::make_unique<crypto_kit>(crypto_kit{
+                cryptos[i] = new crypto_kit{
                     bids[i],
                     sks[i],
                     pks[i],
                     mpk
-                });
+                };
             }
 
             return cryptos;
@@ -146,4 +163,4 @@ namespace raresync {
     };
 }
 
-#endif //RARESYNC_CRYPTO_HPP
+#endif //RARESYNC_CRYPTO_H

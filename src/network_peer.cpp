@@ -26,59 +26,59 @@ namespace raresync {
 
         void close_session();
 
-        void send(proto::message_sptr msg) {
+        void send(proto::message* msg) {
+            auto bytes = msg->to_raw();
+            auto pkt = new proto::packet();
+            pkt->body_length(bytes.size());
+            memcpy(pkt->body(), bytes.data(), pkt->body_length());
+            pkt->encode_header();
+
             {
                 write_lock wl(msmtx_);
-
-                auto str = msg->to_string();
-                proto::packet_sptr pkt(new proto::packet());
-                pkt->body_length(str.length());
-                memcpy(pkt->body(), str.c_str(), pkt->body_length());
-                pkt->encode_header();
-
                 messages_.push(pkt);
             }
 
-            if (connected_) write();
+            if (connected_) try_write();
         }
 
         void connect() {
             auto handler = [this](const net_error& nerr) {
-                this->connected_ = true; write();
+                this->connected_ = true; try_write();
             };
 
             socket_.async_connect(ep_, handler);
         }
 
-        void write() {
-            if (!can_send()) return;
-
+        void try_write() {
             auto handler = [this](const net_error& nerr, std::size_t bytes) {
                 if (nerr || bytes == 0) {
                     close_session(); return;
                 }
 
-                write();
+                try_write();
             };
+
+            proto::packet* message;
 
             {
                 write_lock wl(msmtx_);
-                auto buf = buffer(
-                        messages_.front()->data(),
-                        messages_.front()->length()
-                        );
-                messages_.pop();
+                if (messages_.empty()) return;
 
-                async_write(socket_, buf, handler);
+                message = messages_.front();
+                messages_.pop();
             }
+
+//            LOG_INFO("core[%d] writes msg: %s", id_, message->data());
+
+            auto buf = buffer(
+                    message->data(),
+                    message->length()
+                    );
+
+            async_write(socket_, buf, handler);
         }
 
     private:
-        bool can_send() {
-            read_lock rl(msmtx_);
-            return !messages_.empty();
-        }
-
         tcp::socket socket_;
         tcp::endpoint ep_;
         asio_peer *peer_;
@@ -88,7 +88,7 @@ namespace raresync {
         // unsent messages
         // how to deal with missing messages if session is closed ?
         std::shared_mutex msmtx_;
-        queue<proto::packet_sptr> messages_;
+        queue<proto::packet*> messages_;
     };
 
     /* peer_impl maintains connections to a peer,
@@ -101,7 +101,7 @@ class asio_peer : public network::peer {
 
         void start() final {}
 
-        void send(proto::message_sptr msg) final {
+        void send(proto::message* msg) {
             // recreate connection if necessary
             if (!session_sptr_) {
                 session_sptr_ = std::make_shared<client_session>(ios_, this);

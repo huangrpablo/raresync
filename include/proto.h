@@ -2,12 +2,15 @@
 // Created by 黄保罗 on 15.11.22.
 //
 
-#include "string"
-#include "crypto.hpp"
-#include <boost/format.hpp>
-
+#pragma once
 #ifndef RARESYNC_PROTO_H
 #define RARESYNC_PROTO_H
+
+#include "string"
+#include "crypto.h"
+#include <boost/format.hpp>
+#include "sstream"
+using namespace std;
 
 namespace raresync::proto {
         typedef uint8_t msg_type;
@@ -15,56 +18,68 @@ namespace raresync::proto {
         const msg_type EPOCH_COMPLETION = 1;
         const msg_type EPOCH_ENTRANCE = 2;
 
-        std::string msg_type_to_string(msg_type type) {
+        static std::string msg_type_to_string(msg_type type) {
             switch (type) {
                 case EPOCH_COMPLETION: return "Epoch Completion";
                 case EPOCH_ENTRANCE: return "Epoch Entrance";
+                default: return "Empty";
             }
         }
 
         struct message {
-            message() : type(EMPTY),to(0), from(0), epoch(-1), sig() {}
+            message() : type(EMPTY),to(0), from(0), epoch(-1) {}
 
-            message(const string& encoded) {
-                int start = 0; int end = encoded.find("::");
-                int sz = encoded.size();
-                type = std::atoi(encoded.substr(start, end).c_str());
+            message(byte* encoded) {
+                string str((char*)encoded);
 
-                start = end+1; end = encoded.substr(start, sz-start).find("::");
-                to = std::atoi(encoded.substr(start, end).c_str());
+                int start = 0; int end = (int)str.find("::");
 
-                start = end+1; end = encoded.substr(start, sz-start).find("::");
-                from = std::atoi(encoded.substr(start, end).c_str());
+                string type_str(str.substr(start, end));
+                type = std::atoi(type_str.c_str());
 
-                start = end+1; end = encoded.substr(start, sz-start).find("::");
-                epoch = std::atoi(encoded.substr(start, end).c_str());
+                start = end+2; end = (int)str.find("::", start);
+                string to_str(str.substr(start, end-start));
+                to = std::atoi(to_str.c_str());
 
-                start = end+1; end = encoded.substr(start, sz-start).find("::");
-                sig_sz = std::atoi(encoded.substr(start, end).c_str());
+                start = end+2; end = (int)str.find("::", start);
+                string from_str(str.substr(start, end-start));
+                from = std::atoi(from_str.c_str());
 
-                start = end+1;
-                auto buf = encoded.substr(start, sig_sz).c_str();
-                blsSignatureDeserialize(&sig, buf, sig_sz);
+                start = end+2; end = (int)str.find("::", start);
+                string epoch_str(str.substr(start, end-start));
+                epoch = std::atoi(epoch_str.c_str());
+
+                start = end+2; end = (int)str.find("::", start);
+                string sig_sz_str(str.substr(start, end-start));
+                sig_sz = std::atoi(sig_sz_str.c_str());
+
+                start = end+2;
+                sig = deserialize(encoded + start, sig_sz);
+            }
+
+            vector<byte> to_raw() {
+                auto pre = (boost::format("%1%::%2%::%3%::%4%::%5%::") % int(type) % to % from % epoch % sig_sz).str();
+                vector<byte> v;
+                for (char i : pre) v.push_back(byte(i));
+                for (byte i : sig_hex) v.push_back(i);
+
+                return v;
             }
 
 
-            std::string to_string() {
-                char buf[64];
-                sig_sz = blsSignatureSerialize(buf, 64, &sig);
-                auto s = boost::format("%1%::%2%::%3%::%4%::%5%::%6%") % type % to % from % epoch % sig_sz % buf;
-                return s.str();
+            std::string to_log() {
+                return (boost::format("type=%1%::to=%2%::from=%3%::epoch=%4%") % msg_type_to_string(type) % to % from % epoch).str();
             }
 
             msg_type type;
             int to;
             int from;
             int epoch;
-            bsg sig;
-
             size_t sig_sz;
-        };
+            vector<byte> sig_hex;
 
-        typedef std::shared_ptr<message> message_sptr;
+            bsg sig;
+        };
 
         // copied from asio.chat_room example
         struct packet {
@@ -74,17 +89,19 @@ namespace raresync::proto {
 
             packet() : body_length_(0) {}
 
-            const char* data() const { return data_; }
+            const byte* data() const { return data_; }
 
-            char* data() { return data_; }
+            byte* data() { return data_; }
 
             size_t length() { return header_length + body_length_; }
 
-            const char* body() const { return data_ + header_length; }
+            const byte* body() const { return data_ + header_length; }
 
-            char* body()  { return data_ + header_length; }
+            byte* body()  { return data_ + header_length; }
 
             size_t body_length() {return body_length_; }
+
+
 
             void body_length(size_t length)
             {
@@ -97,7 +114,7 @@ namespace raresync::proto {
             {
                 using namespace std; // For strncat and atoi.
                 char header[header_length + 1] = "";
-                strncat(header, data_, header_length);
+                strncat(header, (char*)(data_), header_length);
                 body_length_ = atoi(header);
                 if (body_length_ > max_body_length)
                 {
@@ -111,16 +128,19 @@ namespace raresync::proto {
             {
                 using namespace std; // For sprintf and memcpy.
                 char header[header_length + 1] = "";
-                sprintf(header, "%4d", body_length_);
-                memcpy(data_, header, header_length);
+                sprintf(header, "%4d", static_cast<int>(body_length_));
+                memcpy(data_, (byte*)header, header_length);
+            }
+
+            void clear() {
+                memset(data_, 0, sizeof(data_));
             }
 
         private:
-            char data_[header_length + max_body_length];
+            byte data_[header_length + max_body_length];
             size_t body_length_;
         };
 
-        typedef std::shared_ptr<packet> packet_sptr;
     }
 
 #endif //RARESYNC_PROTO_H

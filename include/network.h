@@ -1,13 +1,14 @@
 //
 // Created by 黄保罗 on 01.11.22.
 //
-
+#pragma once
 #ifndef RARESYNC_NETWORK_H
 #define RARESYNC_NETWORK_H
 
 #include "boost/asio.hpp"
 #include "map"
 #include "proto.h"
+#include "log.h"
 
 using namespace boost::asio;
 
@@ -20,8 +21,6 @@ namespace raresync::network {
             virtual void on_epoch_entrance_received(int pid, int e, bsg t_sig) = 0;
         };
 
-        typedef std::shared_ptr<callback> callback_sptr;
-
         /* network manages a receiver and multiple senders */
         class network {
         public:
@@ -33,13 +32,13 @@ namespace raresync::network {
 
             // send to remote peers
             // each message has a to field, corresponding the target peer id
-            virtual void send(std::vector<proto::message_sptr>& msgs) = 0;
+            virtual void send(std::vector<proto::message*>& msgs) = 0;
 
             virtual void add_peer(int pid, const std::string& address, int port) = 0;
 
             virtual void remove_peer(int pid) = 0;
 
-            static std::shared_ptr<network> create(callback_sptr cb, int id);
+            static std::shared_ptr<network> create(callback* cb, int id);
         };
 
         typedef std::shared_ptr<network> network_sptr;
@@ -49,7 +48,7 @@ namespace raresync::network {
         public:
             virtual ~peer() = default;
             virtual void start() = 0;
-            virtual void send(proto::message_sptr msg) = 0;
+            virtual void send(proto::message* msg) = 0;
             virtual void stop() = 0;
             virtual bool active() = 0;
 
@@ -63,7 +62,7 @@ namespace raresync::network {
             virtual void start() = 0;
             virtual void stop() = 0;
 
-            static std::shared_ptr<server> create(const std::string& address, int port, io_service& ios, callback_sptr cb);
+            static std::shared_ptr<server> create(int id, const std::string& address, int port, io_service& ios, callback* cb);
         };
 
         typedef std::shared_ptr<server> server_sptr;
