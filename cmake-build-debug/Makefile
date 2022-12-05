@@ -153,6 +153,30 @@ main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/main.cpp.s
 .PHONY : main.cpp.s
 
+run_instance.o: run_instance.cpp.o
+.PHONY : run_instance.o
+
+# target to build an object file
+run_instance.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/run_instance.cpp.o
+.PHONY : run_instance.cpp.o
+
+run_instance.i: run_instance.cpp.i
+.PHONY : run_instance.i
+
+# target to preprocess a source file
+run_instance.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/run_instance.cpp.i
+.PHONY : run_instance.cpp.i
+
+run_instance.s: run_instance.cpp.s
+.PHONY : run_instance.s
+
+# target to generate assembly for a file
+run_instance.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/run_instance.cpp.s
+.PHONY : run_instance.cpp.s
+
 src/core.o: src/core.cpp.o
 .PHONY : src/core.o
 
@@ -261,6 +285,9 @@ help:
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
+	@echo "... run_instance.o"
+	@echo "... run_instance.i"
+	@echo "... run_instance.s"
 	@echo "... src/core.o"
 	@echo "... src/core.i"
 	@echo "... src/core.s"

@@ -84,25 +84,10 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/conf.h">
-			<Option target="raresync"/>
-		</Unit>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/core.h">
-			<Option target="raresync"/>
-		</Unit>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/crypto.hpp">
-			<Option target="raresync"/>
-		</Unit>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/define.h">
-			<Option target="raresync"/>
-		</Unit>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/network.h">
-			<Option target="raresync"/>
-		</Unit>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/include/proto.h">
-			<Option target="raresync"/>
-		</Unit>
 		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/main.cpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/run_instance.cpp">
 			<Option target="raresync"/>
 		</Unit>
 		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/src/core.cpp">

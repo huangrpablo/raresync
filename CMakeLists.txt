@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(include)
 
-add_executable(raresync main.cpp src/core.cpp src/network.cpp src/network_peer.cpp src/network_server.cpp)
+add_executable(raresync main.cpp src/core.cpp src/network.cpp src/network_peer.cpp src/network_server.cpp example/run_instance.cpp)
 
 find_library(BLS bls384_256 lib)
 

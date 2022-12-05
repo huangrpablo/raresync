@@ -78,6 +78,7 @@ void run_raresync_instance(int id, conf* cf, crypto_kit* cry) {
     instance->stop();
 }
 
+
 int main() {
     int n = 4; int k = 3; int f = 1;
 
