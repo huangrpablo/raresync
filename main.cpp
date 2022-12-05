@@ -1,4 +1,4 @@
-#include <iostream>
+
 #include "core.h"
 #include "vector"
 #include "thread"

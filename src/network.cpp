@@ -30,7 +30,7 @@ namespace raresync::network {
             server_->start();
 
             io_thread_ = std::thread([this]() {this->ios_.run();});
-            LOG_INFO("core[%d] network starts...", id_);
+            LOG_INFO("core[%d] network[%d] starts...", id_, port);
         }
 
         void stop() final {

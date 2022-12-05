@@ -5,10 +5,9 @@
 #ifndef RARESYNC_CRYPTO_H
 #define RARESYNC_CRYPTO_H
 
-
 #define BLS_ETH
 #include <bls/bls384_256.h>
-#include <cassert>
+#include "bls/bls.hpp"
 #include "vector"
 #include "iostream"
 #include "unordered_map"
@@ -91,6 +90,52 @@ namespace raresync {
         return sig;
     }
 
+    static void from_str(const std::string& str, bid& id) {
+        mclBnFr_setStr(&id.v, str.c_str(), str.size(), 16);
+    }
+
+    static string to_str(bid& id) {
+        string str;
+        str.resize(1024);
+        size_t n = mclBnFr_getStr(&str[0], str.size(), &id.v, 16|bls::IoPrefix);
+        str.resize(n);
+        return str;
+    }
+
+    static void from_str(const std::string& str, bsk& sk) {
+        mclBnFr_setStr(&sk.v, str.c_str(), str.size(), 16);
+    }
+
+    static string to_str(bsk& sk) {
+        string str;
+        str.resize(1024);
+        size_t n = mclBnFr_getStr(&str[0], str.size(), &sk.v, 16|bls::IoPrefix);
+        str.resize(n);
+        return str;
+    }
+
+    static void from_str(const std::string& str, bpk& pk) {
+#ifdef BLS_ETH
+        int ret = mclBnG1_setStr(&pk.v, str.c_str(), str.size(), 16);
+#else
+        int ret = mclBnG2_setStr(&pk.v, str.c_str(), str.size(), 16);
+#endif
+        if (ret != 0) throw std::runtime_error("PublicKey:setStr");
+    }
+
+    static string to_str(bpk& pk) {
+        string str;
+        str.resize(1024);
+#ifdef BLS_ETH
+        size_t n = mclBnG1_getStr(&str[0], str.size(), &pk.v, 16|bls::IoPrefix);
+#else
+        size_t n = mclBnG2_getStr(&str[0], str.size(), &self_.v, 16|bls::IoPrefix);
+#endif
+        if (n == 0) throw std::runtime_error("PublicKey:getStr");
+        str.resize(n);
+        return str;
+    }
+
     typedef std::unique_ptr<crypto_kit> crypto_uptr;
     typedef std::vector<crypto_kit*> crypto_list;
 
@@ -98,7 +143,7 @@ namespace raresync {
     public:
         crypto_factory(int N, int K) : N_(N), K_(K) {}
 
-        int init() {
+        static int init() {
         #ifdef BLS_ETH
             puts("BLS_ETH mode");
         #else

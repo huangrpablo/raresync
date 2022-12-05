@@ -22,8 +22,6 @@ bool Parser::load(const std::string &fname) {
 
     if (!fs.is_open()) return false;
 
-    char c; string key;
-
     int N; int K;
     int fault_num = 1;
     int D = 1; int d = 1;
@@ -35,39 +33,41 @@ bool Parser::load(const std::string &fname) {
     vector<bsk> bls_sks;
     vector<bpk> bls_mpks;
 
-    string line;
-    getline(fs, line);
-    istringstream is(line);
+    string line0;
+    getline(fs, line0);
+    istringstream is(line0);
 
-    is >> key >> c >> N; is >> c;
-    is >> key >> c >> K; is >> c;
-    is >> key >> c >> fault_num; is >> c;
-    is >> key >> c >> D; is >> c;
-    is >> key >> d >> D;
+    is >> N >> K >> fault_num >> D >> d;
 
     while (!fs.eof()) {
         string line;
         getline(fs, line);
 
+        if (line.empty()) break;
+
         istringstream is(line);
 
         int id; string endpoint;
+        string id_str; string pk_str;
+        string sk_str; string mpk_str;
+
         bid bls_id; bpk bls_pk;
         bsk bls_sk; bpk bls_mpk;
 
-        is >> key >> c >> id; is >> c;
+        string token;
+        getline(is, token, ',');
+        id = atoi(token.c_str());
 
-        is >> key >> c >> endpoint; is >> c;
+        getline(is, endpoint, ',');
+        getline(is, id_str, ',');
+        getline(is, pk_str, ',');
+        getline(is, sk_str, ',');
+        getline(is, mpk_str, ',');
 
-        // this is ridiculous
-        // in bls, you can't even deserialize it via istringstream
-        is >> key >> c >> bls_id; is >> c;
-
-        is >> key >> c >> bls_pk; is >> c;
-
-        is >> key >> c >> bls_sk; is >> c;
-
-        is >> key >> c >> bls_mpk;
+        from_str(id_str, bls_id);
+        from_str(pk_str, bls_pk);
+        from_str(sk_str, bls_sk);
+        from_str(mpk_str, bls_mpk);
 
         ids.push_back(id);
         endpoints.push_back(endpoint);
@@ -115,7 +115,9 @@ int main(int argc, char **argv) {
     auto parser = new Parser();
 
     int id = atoi(argv[1]);
-    parser->load("conf/raresync.conf");
+    LOG_INFO("%d", id);
+    crypto_factory::init();
+    parser->load("../conf/raresync.conf");
 
     auto instance = create(
             id, parser->confs[id],
@@ -124,7 +126,7 @@ int main(int argc, char **argv) {
 
     instance->init();
     instance->start();
-//    instance->stop();
+    instance->stop();
 
     return 0;
 }

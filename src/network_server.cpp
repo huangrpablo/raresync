@@ -76,6 +76,7 @@ class asio_server : public network::server {
 public:
     explicit asio_server(int id, io_service& ios, const std::string& address, int port, network::callback* cb) :
     id_(id), ios_(ios), acceptor_(ios), cb_(cb) {
+        LOG_INFO("address=%d", port);
         auto ep = tcp::endpoint(ip::address::from_string(address), port);
         acceptor_.open(ep.protocol());
         acceptor_.set_option(tcp::acceptor::reuse_address(1));
