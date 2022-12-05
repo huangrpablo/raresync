@@ -84,10 +84,13 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/main.cpp">
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/example/gen_conf.cpp">
 			<Option target="raresync"/>
 		</Unit>
-		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/run_instance.cpp">
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/example/run_instance.cpp">
+			<Option target="raresync"/>
+		</Unit>
+		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/main.cpp">
 			<Option target="raresync"/>
 		</Unit>
 		<Unit filename="/Users/paulo/Documents/SP/code/repo/raresync/src/core.cpp">

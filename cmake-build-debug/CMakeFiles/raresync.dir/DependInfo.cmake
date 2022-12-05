@@ -8,8 +8,9 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "/Users/paulo/Documents/SP/code/repo/raresync/example/gen_conf.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/example/gen_conf.cpp.o"
+  "/Users/paulo/Documents/SP/code/repo/raresync/example/run_instance.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/example/run_instance.cpp.o"
   "/Users/paulo/Documents/SP/code/repo/raresync/main.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/main.cpp.o"
-  "/Users/paulo/Documents/SP/code/repo/raresync/run_instance.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/run_instance.cpp.o"
   "/Users/paulo/Documents/SP/code/repo/raresync/src/core.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/src/core.cpp.o"
   "/Users/paulo/Documents/SP/code/repo/raresync/src/network.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/src/network.cpp.o"
   "/Users/paulo/Documents/SP/code/repo/raresync/src/network_peer.cpp" "/Users/paulo/Documents/SP/code/repo/raresync/cmake-build-debug/CMakeFiles/raresync.dir/src/network_peer.cpp.o"
