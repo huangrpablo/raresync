@@ -103,7 +103,7 @@ class synchronizer : public network::callback {
         /* end of crypto fields */
 
         /* # of nodes can fail */
-        int f_;
+        int fault_num_;
 
         peer_cryt_map peer_cryts_;
         vector<int> peer_ids_;

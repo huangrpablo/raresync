@@ -28,7 +28,6 @@ namespace raresync {
 
         void send(proto::message* msg) {
             auto chars = msg->to_raw_str();
-//            auto bytes = msg->to_raw();
             auto pkt = new proto::packet();
             pkt->body_length(chars.size());
             memcpy(pkt->body(), chars.data(), pkt->body_length());

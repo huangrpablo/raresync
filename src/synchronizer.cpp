@@ -15,7 +15,7 @@ void raresync::synchronizer::init() {
 
     inited_ = true;
 
-    f_ = conf_->f;
+    fault_num_ = conf_->fault_num;
 
     auto self_conf = conf_->peer_confs[id_];
 
@@ -35,7 +35,7 @@ void raresync::synchronizer::init() {
     /* crypto */
 
     /* broadcast */
-    threshold_ = 2 * f_ + 1;
+    threshold_ = 2 * fault_num_ + 1;
     epoch_completed_ = std::map<int, std::map<int, bsg>>();
 
     net_ = network::network::create(this, id_);
@@ -119,12 +119,12 @@ void raresync::synchronizer::on_view_timer_expired() {
         epoch = epoch_;
 
         // check if the current view is not the last view of the current epoch
-        if (view < f_ + 1) view_++;
+        if (view < fault_num_ + 1) view_++;
     }
 
     // check if the current view is not the last view of the current epoch
-    if (view < f_ + 1) {
-        int view_to_advance = (epoch - 1) * (f_ + 1) + (view+1);
+    if (view < fault_num_ + 1) {
+        int view_to_advance = (epoch - 1) * (fault_num_ + 1) + (view + 1);
 
         // measure the duration of the view
         measure_view_timer();
@@ -170,7 +170,7 @@ void raresync::synchronizer::on_dissemination_timer_expired() {
         view_ = 1;
     }
 
-    int view_to_advance = (epoch - 1) * (f_ + 1) + 1;
+    int view_to_advance = (epoch - 1) * (fault_num_ + 1) + 1;
 
     // measure the duration of the view
     measure_view_timer();

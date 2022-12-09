@@ -42,7 +42,7 @@ peer_conf_sptr new_peer_conf(int pid, std::string& address, int port, bid bid_, 
 conf* new_conf(int D, int d, int f, std::vector<peer_conf_sptr> peer_confs) {
     auto c = new conf();
     c->D = D; c->d = d;
-    c->f = f; c->peer_confs = peer_confs;
+    c->fault_num = f; c->peer_confs = peer_confs;
     return c;
 }
 
