@@ -90,6 +90,8 @@ namespace raresync {
         return sig;
     }
 
+
+
     static void from_str(const std::string& str, bid& id) {
         mclBnFr_setStr(&id.v, str.c_str(), str.size(), 16);
     }
@@ -136,7 +138,29 @@ namespace raresync {
         return str;
     }
 
-    typedef std::unique_ptr<crypto_kit> crypto_uptr;
+    static void from_str(const std::string& str, bsg& sg) {
+#ifdef BLS_ETH
+        int ret = mclBnG2_setStr(&sg.v, str.c_str(), str.size(), 16);
+#else
+        int ret = mclBnG1_setStr(&sg.v, str.c_str(), str.size(), 16);
+#endif
+        if (ret != 0) throw std::runtime_error("Signature:setStr");
+    }
+
+    static string to_str(bsg& sg) {
+        string str;
+        str.resize(1024);
+#ifdef BLS_ETH
+        size_t n = mclBnG2_getStr(&str[0], str.size(), &sg.v, 16|bls::IoPrefix);
+#else
+        size_t n = mclBnG1_getStr(&str[0], str.size(), &self_.v, ioMode);
+#endif
+        if (n == 0) throw std::runtime_error("Signature:tgetStr");
+        str.resize(n);
+        return str;
+    }
+
+    typedef std::shared_ptr<crypto_kit> crypto_sptr;
     typedef std::vector<crypto_kit*> crypto_list;
 
     class crypto_factory {

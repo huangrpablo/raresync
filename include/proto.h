@@ -26,59 +26,99 @@ namespace raresync::proto {
             }
         }
 
+        // quorum certificate
+        struct qcert {
+            msg_type type;
+            string value; int view; bsg sig;
+
+            qcert() : type(EMPTY), value("v"), view(-1) {}
+        };
+
         struct message {
-            message() : type(EMPTY),to(0), from(0), epoch(-1) {}
+            message() : type(EMPTY),to(0), from(0), epoch(-1), value("v"), view(-1), qc(nullptr) {}
 
-            message(byte* encoded) {
-                string str((char*)encoded);
+            message(char* encoded) {
+                istringstream is(encoded);
 
-                int start = 0; int end = (int)str.find("::");
+                /*
+                 * type, to, from
+                 * epoch, sig
+                 * value, view, QC: type, value, view, sig
+                 *
+                 * */
 
-                string type_str(str.substr(start, end));
-                type = std::atoi(type_str.c_str());
+                string token;
+                getline(is, token, ',');
+                type = atoi(token.c_str());
 
-                start = end+2; end = (int)str.find("::", start);
-                string to_str(str.substr(start, end-start));
-                to = std::atoi(to_str.c_str());
+                getline(is, token, ',');
+                to = atoi(token.c_str());
 
-                start = end+2; end = (int)str.find("::", start);
-                string from_str(str.substr(start, end-start));
-                from = std::atoi(from_str.c_str());
+                getline(is, token, ',');
+                from = atoi(token.c_str());
 
-                start = end+2; end = (int)str.find("::", start);
-                string epoch_str(str.substr(start, end-start));
-                epoch = std::atoi(epoch_str.c_str());
+                getline(is, token, ',');
+                epoch = atoi(token.c_str());
 
-                start = end+2; end = (int)str.find("::", start);
-                string sig_sz_str(str.substr(start, end-start));
-                sig_sz = std::atoi(sig_sz_str.c_str());
+                getline(is, token, ',');
+                from_str(token, sig);
 
-                start = end+2;
-                sig = deserialize(encoded + start, sig_sz);
+                getline(is, token, ',');
+                value = token;
+
+                getline(is, token, ',');
+                view = atoi(token.c_str());
+
+                qc = nullptr;
+
+                if (is.eof()) return;
+
+                qc = new qcert();
+
+                getline(is, token, ',');
+                qc->type = atoi(token.c_str());
+
+                getline(is, token, ',');
+                qc->value = token;
+
+                getline(is, token, ',');
+                qc->view = atoi(token.c_str());
+
+                getline(is, token, ',');
+                from_str(token, qc->sig);
             }
 
-            vector<byte> to_raw() {
-                auto pre = (boost::format("%1%::%2%::%3%::%4%::%5%::") % int(type) % to % from % epoch % sig_sz).str();
-                vector<byte> v;
-                for (char i : pre) v.push_back(byte(i));
-                for (byte i : sig_hex) v.push_back(i);
+            string to_raw_str() {
+                /*
+                 * type, to, from
+                 * epoch, sig
+                 * value, view, QC: type, value, view, sig
+                 *
+                 * */
 
-                return v;
+                ostringstream os;
+                os << int(type) << "," << to << "," << from << ",";
+                os << epoch << "," << to_str(sig) << ",";
+                os << value << "," << view;
+
+                if (qc == nullptr) return os.str();
+
+                os << ",";
+                os << int(qc->type) << "," << qc->value << ",";
+                os << qc->view << "," << to_str(qc->sig);
+
+                return os.str();
             }
-
 
             std::string to_log() {
                 return (boost::format("type=%1%::to=%2%::from=%3%::epoch=%4%") % msg_type_to_string(type) % to % from % epoch).str();
             }
 
-            msg_type type;
-            int to;
-            int from;
-            int epoch;
-            size_t sig_sz;
-            vector<byte> sig_hex;
+            msg_type type; int to; int from;
+            int epoch; bsg sig;
 
-            bsg sig;
+            string value; int view; qcert* qc;
+
         };
 
         // copied from asio.chat_room example
@@ -100,8 +140,6 @@ namespace raresync::proto {
             byte* body()  { return data_ + header_length; }
 
             size_t body_length() {return body_length_; }
-
-
 
             void body_length(size_t length)
             {

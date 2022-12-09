@@ -2,7 +2,7 @@
 // Created by 黄保罗 on 30.10.22.
 //
 
-#include "core.h"
+#include "synchronizer.h"
 #include <memory>
 #include "boost/asio.hpp"
 #include "log.h"
@@ -10,7 +10,7 @@
 using namespace boost::asio;
 using timer_error = boost::system::error_code;
 
-void raresync::core::init() {
+void raresync::synchronizer::init() {
     if (inited_) return;
 
     inited_ = true;
@@ -55,7 +55,7 @@ void raresync::core::init() {
     dissemination_duration_ = boost::asio::chrono::seconds(conf_->d);
 }
 
-void raresync::core::start() {
+void raresync::synchronizer::start() {
     if (started_) return;
 
     started_ = true;
@@ -66,7 +66,7 @@ void raresync::core::start() {
         view_ = 1;
     }
 
-    LOG_INFO("core[%d] starts: epoch=%d, view=%d", id_, 1, 1);
+    LOG_INFO("synchronizer[%d] starts: epoch=%d, view=%d", id_, 1, 1);
 
     /* run asio service */
 
@@ -80,37 +80,37 @@ void raresync::core::start() {
     ios_.run();
 }
 
-void raresync::core::stop() {
+void raresync::synchronizer::stop() {
 
 }
 
-rs_errno raresync::core::advance(int view) const {
+rs_errno raresync::synchronizer::advance(int view) const {
     // do something
-    LOG_INFO("core[%d] advances epoch=%d, view=%d", id_, epoch_, view);
+    LOG_INFO("synchronizer[%d] advances epoch=%d, view=%d", id_, epoch_, view);
 
     return GOOD;
 }
 
-void raresync::core::measure_view_timer() {
+void raresync::synchronizer::measure_view_timer() {
     view_timer_.expires_from_now(view_duration_);
     view_timer_.async_wait([this](const timer_error &e) {
         on_view_timer_expired();
     });
 
-    LOG_INFO("core[%d] measures a view timer", id_);
+    LOG_INFO("synchronizer[%d] measures a view timer", id_);
 }
 
-void raresync::core::measure_dissemination_timer() {
+void raresync::synchronizer::measure_dissemination_timer() {
     dissemination_timer_.expires_from_now(dissemination_duration_);
     dissemination_timer_.async_wait([this](const timer_error &e) {
         on_dissemination_timer_expired();
     });
 
-    LOG_INFO("core[%d] measures a dissemination timer", id_);
+    LOG_INFO("synchronizer[%d] measures a dissemination timer", id_);
 }
 
-void raresync::core::on_view_timer_expired() {
-    LOG_INFO("core[%d] view timer expired", id_);
+void raresync::synchronizer::on_view_timer_expired() {
+    LOG_INFO("synchronizer[%d] view timer expired", id_);
 
     int view; int epoch;
     {
@@ -151,8 +151,8 @@ void raresync::core::on_view_timer_expired() {
     broadcast_epoch_completion(epoch, p_sig);
 }
 
-void raresync::core::on_dissemination_timer_expired() {
-    LOG_INFO("core[%d] dissemination timer expired", id_);
+void raresync::synchronizer::on_dissemination_timer_expired() {
+    LOG_INFO("synchronizer[%d] dissemination timer expired", id_);
 
     int epoch;
     bsg epoch_sig;
@@ -179,8 +179,7 @@ void raresync::core::on_dissemination_timer_expired() {
     advance(view_to_advance);
 }
 
-void raresync::core::broadcast(proto::msg_type type, int e, bsg sig) {
-    auto sig_hex = serialize(sig);
+void raresync::synchronizer::broadcast(proto::msg_type type, int e, bsg sig) {
 
     std::vector<proto::message*> msgs(peer_ids_.size());
     for (int i = 0; i < peer_ids_.size(); i++) {
@@ -189,8 +188,7 @@ void raresync::core::broadcast(proto::msg_type type, int e, bsg sig) {
         msg->to = peer_ids_[i];
         msg->from = id_;
         msg->epoch = e;
-        msg->sig_sz = sig_hex.size();
-        msg->sig_hex = sig_hex;
+        msg->sig = sig;
 
         msgs[i] = msg;
     }
@@ -199,21 +197,21 @@ void raresync::core::broadcast(proto::msg_type type, int e, bsg sig) {
     net_->send(msgs);
 }
 
-void raresync::core::broadcast_epoch_completion(int e, bsg p_sig) {
-    LOG_INFO("core[%d] broadcasts EPOCH_COMPLETION: epoch=%d", id_, e);
+void raresync::synchronizer::broadcast_epoch_completion(int e, bsg p_sig) {
+    LOG_INFO("synchronizer[%d] broadcasts EPOCH_COMPLETION: epoch=%d", id_, e);
 
     broadcast(proto::EPOCH_COMPLETION, e, p_sig);
 }
 
-void raresync::core::broadcast_epoch_entrance(int e, bsg t_sig) {
-    LOG_INFO("core[%d] broadcasts EPOCH_ENTRANCE: epoch=%d", id_, e);
+void raresync::synchronizer::broadcast_epoch_entrance(int e, bsg t_sig) {
+    LOG_INFO("synchronizer[%d] broadcasts EPOCH_ENTRANCE: epoch=%d", id_, e);
 
     broadcast(proto::EPOCH_ENTRANCE, e, t_sig);
 }
 
 
-void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
-    LOG_INFO("core[%d] receives EPOCH_ENTRANCE: pid=%d, epoch=%d", pid, id_, e);
+void raresync::synchronizer::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
+    LOG_INFO("synchronizer[%d] receives EPOCH_ENTRANCE: pid=%d, epoch=%d", pid, id_, e);
 
     // verify whether this t_sig is combined from 2f+1 peers
     auto msg = std::to_string(e);
@@ -235,8 +233,8 @@ void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
     measure_dissemination_timer();
 }
 
-void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
-    LOG_INFO("core[%d] receives EPOCH_COMPLETION: pid=%d, epoch=%d", pid, id_, e);
+void raresync::synchronizer::on_epoch_completion_received(int pid, int e, bsg p_sig) {
+    LOG_INFO("synchronizer[%d] receives EPOCH_COMPLETION: pid=%d, epoch=%d", pid, id_, e);
 
     // verify whether this p_sig is signed by pid
     auto msg = std::to_string(e);
@@ -285,7 +283,7 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
                 sgs[i] = iit->second;
             }
 
-            LOG_INFO("core[%d] collects {EPOCH_COMPLETION}{%d} from %d peers", id_, it.first, it.second.size());
+            LOG_INFO("synchronizer[%d] collects {EPOCH_COMPLETION}{%d} from %d peers", id_, it.first, it.second.size());
 
             new_epoch = it.first + 1;
             new_epoch_sig = crypto_->combine(ids, sgs, threshold_);
@@ -310,7 +308,7 @@ void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
     measure_dissemination_timer();
 }
 
-void raresync::core::collect_garbage(int e) {
+void raresync::synchronizer::collect_garbage(int e) {
     // erase old epochs in epoch_completed list
     {
         write_lock wl(ecmplmtx_);

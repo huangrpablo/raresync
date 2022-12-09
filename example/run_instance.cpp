@@ -4,7 +4,7 @@
 
 #include "string"
 #include "fstream"
-#include "core.h"
+#include "synchronizer.h"
 #include "sstream"
 using namespace std;
 using namespace raresync;

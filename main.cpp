@@ -1,5 +1,5 @@
 
-#include "core.h"
+#include "synchronizer.h"
 #include "vector"
 #include "thread"
 using namespace raresync;

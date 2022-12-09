@@ -30,12 +30,12 @@ namespace raresync::network {
             server_->start();
 
             io_thread_ = std::thread([this]() {this->ios_.run();});
-            LOG_INFO("core[%d] network[%d] starts...", id_, port);
+            LOG_INFO("synchronizer[%d] network[%d] starts...", id_, port);
         }
 
         void stop() final {
             ios_.stop();
-            LOG_INFO("core[%d] network stops...", id_);
+            LOG_INFO("synchronizer[%d] network stops...", id_);
         }
 
         void send(std::vector<proto::message*>& msgs) final {
@@ -46,7 +46,6 @@ namespace raresync::network {
                         continue;
 
                     peers_[msgs[i]->to]->send(msgs[i]);
-//                    LOG_INFO("core[%d] sends msg to %d: %s", id_, msgs[i]->to, msgs[i]->to_log().c_str());
                 }
             };
 

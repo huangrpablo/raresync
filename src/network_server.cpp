@@ -28,7 +28,6 @@ public:
                 );
 
         auto handler = [self](const net_error& nerr, size_t bytes) {
-//            LOG_INFO("core[%d] reads header: bytes=%d, data=%s", self->id_, bytes, self->read_packet_.data());
 
             if (nerr || bytes == 0) return;
 
@@ -126,7 +125,8 @@ private:
 };
 
 void server_session::on_packet_received() {
-    auto msg = new proto::message(read_packet_.body());
+    auto msg = new proto::message((char*)read_packet_.body());
+
 
 //    LOG_INFO("core[%d] receives msg from %d: %s", msg->to, msg->from, msg->to_log().c_str());
     server_->on_message(msg);
