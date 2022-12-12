@@ -17,11 +17,21 @@ namespace raresync::proto {
         const msg_type EMPTY = 0;
         const msg_type EPOCH_COMPLETION = 1;
         const msg_type EPOCH_ENTRANCE = 2;
+        const msg_type VIEW_CHANGE = 3;
+        const msg_type PREPARE = 4;
+        const msg_type PRE_COMMIT = 5;
+        const msg_type COMMIT = 6;
+        const msg_type DECIDE = 7;
 
         static std::string msg_type_to_string(msg_type type) {
             switch (type) {
                 case EPOCH_COMPLETION: return "Epoch Completion";
                 case EPOCH_ENTRANCE: return "Epoch Entrance";
+                case VIEW_CHANGE: return "View Change";
+                case PREPARE: return "Prepare";
+                case PRE_COMMIT: return "PreCommit";
+                case COMMIT: return "Commit";
+                case DECIDE: return "Decide";
                 default: return "Empty";
             }
         }

@@ -116,8 +116,6 @@ class synchronizer : public network::callback {
         std::shared_mutex ecmplmtx_;
 
         network::network_sptr net_;
-
-
     };
 
     typedef std::shared_ptr<synchronizer> synchronizer_sptr;
