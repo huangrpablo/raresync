@@ -245,7 +245,7 @@ void core::on_leader_precommit(int view) {
 void core::on_process_precommit(int view, proto::message *msg) {
     if (leader(view) != msg->from) return;
 
-    if (!matching_qc(msg->qc, proto::PRE_COMMIT, view)) return;
+    if (!matching_qc(msg->qc, proto::PREPARE, view)) return;
 
     {
         write_lock wl(mtx_);
@@ -284,7 +284,7 @@ void core::on_leader_commit(int view) {
 void core::on_process_commit(int view, proto::message *msg) {
     if (leader(view) != msg->from) return;
 
-    if (!matching_qc(msg->qc, proto::COMMIT, view)) return;
+    if (!matching_qc(msg->qc, proto::PRE_COMMIT, view)) return;
 
     {
         write_lock wl(mtx_);
@@ -321,7 +321,7 @@ void core::on_leader_decide(int view) {
 void core::on_process_decide(int view, proto::message *msg) {
     if (leader(view) != msg->from) return;
 
-    if (!matching_qc(msg->qc, proto::DECIDE, view)) return;
+    if (!matching_qc(msg->qc, proto::COMMIT, view)) return;
 
     decide(msg->qc->value);
 }
