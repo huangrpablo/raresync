@@ -42,12 +42,15 @@ private:
     shared_mutex vcmtx_;
 
     unordered_map<int, vector<proto::message*>> prepare_todos_;
+    unordered_map<int, proto::message*> process_prepare_todos_;
     shared_mutex prepmtx_;
 
     unordered_map<int, vector<proto::message*>> precommit_todos_;
+    unordered_map<int, proto::message*> process_precommit_todos_;
     shared_mutex precmtmtx_;
 
     unordered_map<int, vector<proto::message*>> commit_todos_;
+    unordered_map<int, proto::message*> process_commit_todos_;
     shared_mutex cmmtx_;
 
     network::network_sptr net_;
@@ -57,6 +60,10 @@ private:
     proto::qcert* QC(vector<proto::message*> vote_messages);
     static proto::message* msg(proto::msg_type type, string value, proto::qcert* qc, int view);
     proto::message* vote_msg(proto::msg_type type, string value, proto::qcert* qc, int view);
+
+    bool verify_msg(proto::message* vote_msg);
+    bool verify_qc(proto::qcert* qc);
+
     bool matching_msg(proto::message* msg, proto::msg_type type, int view);
     bool matching_qc(proto::qcert* qc, proto::msg_type type, int view);
 
@@ -80,14 +87,25 @@ private:
     void on_process_decide(int view, proto::message* msg);
 
     void on_view_change_received(proto::message* msg);
+
     void on_prepare_received(proto::message* msg);
+    void on_prepare_received_as_leader(int view, proto::message* msg);
+    void on_prepare_received_as_process(int view, proto::message* msg);
+
     void on_precommit_received(proto::message* msg);
+    void on_precommit_received_as_leader(int view, proto::message* msg);
+    void on_precommit_received_as_process(int view, proto::message* msg);
+
     void on_commit_received(proto::message* msg);
+    void on_commit_received_as_leader(int view, proto::message* msg);
+    void on_commit_received_as_process(int view, proto::message* msg);
+
     void on_decide_received(proto::message* msg);
 
     int leader(int view);
+    void collect_garbage(int view, unordered_map<int, vector<proto::message*>>& todos);
+    void collect_garbage(int view, unordered_map<int, proto::message*>& todos);
 };
-
 }
 
 

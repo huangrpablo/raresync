@@ -55,6 +55,21 @@ proto::message* core::vote_msg(proto::msg_type type, string value, proto::qcert 
     return msg;
 }
 
+bool core::verify_msg(proto::message *vote_msg) {
+    if (!peer_cryts_.count(vote_msg->from))
+        return false;
+
+    ostringstream os;
+    os << int(vote_msg->type) << "," << vote_msg->value << "," << vote_msg->view;
+    return peer_cryts_[vote_msg->from]->share_verify(os.str().c_str(), vote_msg->sig);
+}
+
+bool core::verify_qc(proto::qcert *qc) {
+    ostringstream os;
+    os << int(qc->type) << "," << qc->value << "," << qc->view;
+    return crypto_->combine_verify(os.str().c_str(), qc->sig);
+}
+
 bool core::matching_msg(proto::message *msg, proto::msg_type type, int view) {
     return msg->type == type && msg->view == view;
 }
@@ -247,6 +262,8 @@ void core::on_process_precommit(int view, proto::message *msg) {
 
     if (!matching_qc(msg->qc, proto::PREPARE, view)) return;
 
+    if (!verify_qc(msg->qc)) return;
+
     {
         write_lock wl(mtx_);
         prepareQC = msg->qc;
@@ -286,6 +303,8 @@ void core::on_process_commit(int view, proto::message *msg) {
 
     if (!matching_qc(msg->qc, proto::PRE_COMMIT, view)) return;
 
+    if (!verify_qc(msg->qc)) return;
+
     {
         write_lock wl(mtx_);
         lockedQC = msg->qc;
@@ -323,6 +342,8 @@ void core::on_process_decide(int view, proto::message *msg) {
 
     if (!matching_qc(msg->qc, proto::COMMIT, view)) return;
 
+    if (!verify_qc(msg->qc)) return;
+
     decide(msg->qc->value);
 }
 
@@ -331,6 +352,236 @@ void core::decide(string& value) const {
 }
 
 void core::on_view_change_received(proto::message *msg) {
+    if (leader(msg->view) != id_) return;
 
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(vcmtx_);
+        if (!view_change_todos_.count(msg->view))
+            view_change_todos_[msg->view] = vector<proto::message*>();
+
+        view_change_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, view_change_todos_);
+
+        // todo: might be buggy
+        // make sure given a view, on_leader_prepare only called once
+        threshold_reached = msg->view == view
+                && view_change_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_prepare(view);
+}
+
+void core::on_prepare_received(proto::message *msg) {
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    if (leader(msg->view) == id_)
+        on_prepare_received_as_leader(view, msg);
+    else
+        on_prepare_received_as_process(view, msg);
+}
+
+// prepare vote_msgs from peers
+void core::on_prepare_received_as_leader(int view, proto::message *msg) {
+    if (!verify_msg(msg)) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(prepmtx_);
+        if (!prepare_todos_.count(msg->view))
+            prepare_todos_[msg->view] = vector<proto::message*>();
+
+        prepare_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, prepare_todos_);
+
+        threshold_reached = msg->view == view
+                && prepare_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_precommit(view);
+}
+
+// prepare msg from leader -> return vote_msg to leader
+void core::on_prepare_received_as_process(int view, proto::message *msg) {
+    proto::message* vote_msg;
+
+    {
+        write_lock wl(prepmtx_);
+        process_prepare_todos_[msg->view] = msg;
+
+        collect_garbage(view, process_prepare_todos_);
+
+        if (!process_prepare_todos_.count(view)) return;
+
+        vote_msg = process_prepare_todos_[view];
+        process_prepare_todos_.erase(view);
+    }
+
+    on_process_prepare(view, vote_msg);
+}
+
+void core::on_precommit_received(proto::message *msg) {
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    if (leader(msg->view) == id_)
+        on_precommit_received_as_leader(view, msg);
+    else
+        on_precommit_received_as_process(view, msg);
+}
+
+void core::on_precommit_received_as_leader(int view, proto::message *msg) {
+    if (!verify_msg(msg)) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(precmtmtx_);
+        if (!precommit_todos_.count(msg->view))
+            precommit_todos_[msg->view] = vector<proto::message*>();
+
+        precommit_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, precommit_todos_);
+
+        threshold_reached = msg->view == view
+                && precommit_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_commit(view);
+}
+
+void core::on_precommit_received_as_process(int view, proto::message* msg) {
+    proto::message* vote_msg;
+
+    {
+        write_lock wl(precmtmtx_);
+        process_precommit_todos_[msg->view] = msg;
+
+        collect_garbage(view, process_precommit_todos_);
+
+        if (!process_precommit_todos_.count(view)) return;
+
+        vote_msg = process_precommit_todos_[view];
+        process_precommit_todos_.erase(view);
+    }
+
+    on_process_precommit(view, vote_msg);
+}
+
+void core::on_commit_received(proto::message *msg) {
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    if (leader(msg->view) == id_)
+        on_commit_received_as_leader(view, msg);
+    else
+        on_commit_received_as_process(view, msg);
+}
+
+void core::on_commit_received_as_leader(int view, proto::message *msg) {
+    if (!verify_msg(msg)) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(cmmtx_);
+        if (!commit_todos_.count(msg->view))
+            commit_todos_[msg->view] = vector<proto::message*>();
+
+        commit_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, commit_todos_);
+
+        threshold_reached = msg->view == view
+                && commit_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_decide(view);
+}
+
+void core::on_commit_received_as_process(int view, proto::message *msg) {
+    proto::message* vote_msg;
+
+    {
+        write_lock wl(cmmtx_);
+        process_commit_todos_[msg->view] = msg;
+
+        collect_garbage(view, process_commit_todos_);
+
+        if (!process_commit_todos_.count(view)) return;
+
+        vote_msg = process_commit_todos_[view];
+        process_commit_todos_.erase(view);
+    }
+
+    on_process_commit(view, vote_msg);
+}
+
+void core::on_decide_received(proto::message *msg) {
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    on_process_decide(view, msg);
+}
+
+void core::collect_garbage(int view, unordered_map<int, proto::message*> &todos) {
+    vector<int> obsoletes;
+    for (auto & it : todos) {
+        if (it.first < view)
+            obsoletes.push_back(it.first);
+    }
+
+    for (auto obsolete : obsoletes)
+        todos.erase(obsolete);
+}
+
+void core::collect_garbage(int view, unordered_map<int, vector<proto::message *>> &todos) {
+    vector<int> obsoletes;
+    for (auto & it : todos) {
+        if (it.first < view)
+            obsoletes.push_back(it.first);
+    }
+
+    for (auto obsolete : obsoletes)
+        todos.erase(obsolete);
 }
 
