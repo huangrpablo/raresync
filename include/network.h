@@ -13,12 +13,23 @@
 using namespace boost::asio;
 
 namespace raresync::network {
-        class callback {
+        class synchronizer_callback {
         public:
-            virtual ~callback() = default;
+            virtual ~synchronizer_callback() = default;
 
             virtual void on_epoch_completion_received(int pid, int e, bsg p_sig) = 0;
             virtual void on_epoch_entrance_received(int pid, int e, bsg t_sig) = 0;
+        };
+
+        class core_callback {
+        public:
+            virtual ~core_callback() = default;
+
+            virtual void on_view_change_received(proto::message* msg) = 0;
+            virtual void on_prepare_received(proto::message* msg) = 0;
+            virtual void on_precommit_received(proto::message* msg) = 0;
+            virtual void on_commit_received(proto::message* msg) = 0;
+            virtual void on_decide_received(proto::message* msg) = 0;
         };
 
         /* network manages a receiver and multiple senders */
@@ -38,7 +49,8 @@ namespace raresync::network {
 
             virtual void remove_peer(int pid) = 0;
 
-            static std::shared_ptr<network> create(callback* cb, int id);
+            static std::shared_ptr<network> create(
+                    synchronizer_callback* synchronizer, core_callback* core, int id);
         };
 
         typedef std::shared_ptr<network> network_sptr;
@@ -62,7 +74,8 @@ namespace raresync::network {
             virtual void start() = 0;
             virtual void stop() = 0;
 
-            static std::shared_ptr<server> create(int id, const std::string& address, int port, io_service& ios, callback* cb);
+            static std::shared_ptr<server> create(int id, const std::string& address, int port, io_service& ios,
+                                                  synchronizer_callback* synchronizer, core_callback* core);
         };
 
         typedef std::shared_ptr<server> server_sptr;

@@ -17,7 +17,7 @@ using namespace std;
 namespace raresync {
 
 // QUAD's view core module
-class core {
+class core: public network::core_callback {
 public:
     string* proposal = nullptr;
     proto::qcert* prepareQC = nullptr;
@@ -26,6 +26,24 @@ public:
     int view_;
 
 public:
+    core(int id) : id_(id) {}
+
+    void with_peers(vector<int> peer_ids) {
+        peer_ids_ = peer_ids;
+    }
+
+    void with_crypto(crypto_sptr crypto, peer_cryt_map peer_cryptos) {
+        crypto_ = crypto; peer_cryts_ = peer_cryptos;
+    }
+
+    void with_parameters(int threshold) {
+        threshold_ = threshold;
+    }
+
+    void with_network(network::network_sptr net) {
+        net_ = net;
+    }
+
     void init(string proposal);
     void start_executing(int view);
     void decide(string& value) const;

@@ -73,8 +73,9 @@ typedef std::shared_ptr<server_session> server_session_sptr;
 
 class asio_server : public network::server {
 public:
-    explicit asio_server(int id, io_service& ios, const std::string& address, int port, network::callback* cb) :
-    id_(id), ios_(ios), acceptor_(ios), cb_(cb) {
+    explicit asio_server(int id, io_service& ios, const std::string& address, int port,
+                         network::synchronizer_callback* synchronizer, network::core_callback* core) :
+            id_(id), ios_(ios), acceptor_(ios), synchronizer_(synchronizer), core_(core) {
         LOG_INFO("address=%d", port);
         auto ep = tcp::endpoint(ip::address::from_string(address), port);
         acceptor_.open(ep.protocol());
@@ -98,18 +99,38 @@ public:
     void stop() final {}
 
     // dispatch messages based on message_type
-    void on_message(const proto::message* msg) {
+    void on_message(proto::message* msg) {
         switch (msg->type) {
             case proto::EPOCH_COMPLETION:
-                cb_->on_epoch_completion_received(
+                synchronizer_->on_epoch_completion_received(
                         msg->from, msg->epoch, msg->sig
                         );
                 break;
 
             case proto::EPOCH_ENTRANCE:
-                cb_->on_epoch_entrance_received(
+                synchronizer_->on_epoch_entrance_received(
                         msg->from, msg->epoch, msg->sig
                         );
+                break;
+
+            case proto::VIEW_CHANGE:
+                core_->on_view_change_received(msg);
+                break;
+
+            case proto::PREPARE:
+                core_->on_prepare_received(msg);
+                break;
+
+            case proto::PRE_COMMIT:
+                core_->on_precommit_received(msg);
+                break;
+
+            case proto::COMMIT:
+                core_->on_commit_received(msg);
+                break;
+
+            case proto::DECIDE:
+                core_->on_decide_received(msg);
                 break;
         }
     }
@@ -120,8 +141,8 @@ public:
 private:
     io_service& ios_;
     tcp::acceptor acceptor_;
-    network::callback* cb_;
-
+    network::synchronizer_callback* synchronizer_;
+    network::core_callback* core_;
 };
 
 void server_session::on_packet_received() {
@@ -134,8 +155,9 @@ void server_session::on_packet_received() {
     read_header();
 }
 
-std::shared_ptr<network::server> network::server::create(int id, const std::string &address, int port, io_service &ios, callback* cb) {
-    return std::make_shared<asio_server>(asio_server(id, ios, address, port, cb));
+std::shared_ptr<network::server> network::server::create(int id, const std::string &address, int port, io_service &ios,
+                                                         synchronizer_callback* synchronizer, core_callback* core) {
+    return std::make_shared<asio_server>(asio_server(id, ios, address, port, synchronizer, core));
 }
 
 }

@@ -495,7 +495,7 @@ void core::on_precommit_received_as_process(int view, proto::message* msg) {
     on_process_precommit(view, vote_msg);
 }
 
-void core::on_commit_received(proto::message *msg) {
+void core::on_commit_received(const proto::message *msg) {
     int view;
 
     {

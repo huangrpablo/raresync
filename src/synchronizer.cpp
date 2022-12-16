@@ -88,6 +88,8 @@ rs_errno raresync::synchronizer::advance(int view) const {
     // do something
     LOG_INFO("synchronizer[%d] advances epoch=%d, view=%d", id_, epoch_, view);
 
+    view_core_->start_executing(view);
+
     return GOOD;
 }
 
