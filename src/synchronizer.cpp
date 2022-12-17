@@ -10,51 +10,6 @@
 using namespace boost::asio;
 using timer_error = boost::system::error_code;
 
-void raresync::synchronizer::init() {
-    if (inited_) return;
-
-    inited_ = true;
-
-    fault_num_ = conf_->fault_num;
-
-    auto self_conf = conf_->peer_confs[id_];
-
-    peer_cryts_ = peer_cryt_map();
-
-    for (auto & peer_conf : conf_->peer_confs) {
-        peer_cryts_[peer_conf->pid_] =
-                std::make_shared<peer_cryt>(
-                peer_cryt(peer_conf->pid_,
-                          peer_conf->bid_,
-                          peer_conf->pk_));
-
-        if (peer_conf->pid_ != id_)
-            peer_ids_.push_back(peer_conf->pid_);
-    }
-
-    /* crypto */
-
-    /* broadcast */
-    threshold_ = 2 * fault_num_ + 1;
-    epoch_completed_ = std::map<int, std::map<int, bsg>>();
-
-    net_ = network::network::create(this, id_);
-    net_->start(self_conf->address_, self_conf->port_);
-
-    for (auto & peer_conf : conf_->peer_confs) {
-        if (peer_conf->pid_ != id_)
-            net_->add_peer(
-                    peer_conf->pid_,
-                    peer_conf->address_,
-                    peer_conf->port_
-                    );
-    }
-
-    /* asio service */
-    view_duration_ = boost::asio::chrono::seconds(conf_->D + 2 * conf_->d);
-    dissemination_duration_ = boost::asio::chrono::seconds(conf_->d);
-}
-
 void raresync::synchronizer::start() {
     if (started_) return;
 
@@ -77,7 +32,6 @@ void raresync::synchronizer::start() {
     /* enter the view */
     // enter the first view
     advance(1);
-    ios_.run();
 }
 
 void raresync::synchronizer::stop() {
@@ -190,6 +144,7 @@ void raresync::synchronizer::broadcast(proto::msg_type type, int e, bsg sig) {
         msg->to = peer_ids_[i];
         msg->from = id_;
         msg->epoch = e;
+        msg->siged = 1;
         msg->sig = sig;
 
         msgs[i] = msg;
@@ -213,7 +168,7 @@ void raresync::synchronizer::broadcast_epoch_entrance(int e, bsg t_sig) {
 
 
 void raresync::synchronizer::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
-    LOG_INFO("synchronizer[%d] receives EPOCH_ENTRANCE: pid=%d, epoch=%d", pid, id_, e);
+    LOG_INFO("synchronizer[%d] receives EPOCH_ENTRANCE: pid=%d, epoch=%d", id_, pid, e);
 
     // verify whether this t_sig is combined from 2f+1 peers
     auto msg = std::to_string(e);
@@ -236,7 +191,7 @@ void raresync::synchronizer::on_epoch_entrance_received(int pid, int e, bsg t_si
 }
 
 void raresync::synchronizer::on_epoch_completion_received(int pid, int e, bsg p_sig) {
-    LOG_INFO("synchronizer[%d] receives EPOCH_COMPLETION: pid=%d, epoch=%d", pid, id_, e);
+    LOG_INFO("synchronizer[%d] receives EPOCH_COMPLETION: pid=%d, epoch=%d", id_, pid, e);
 
     // verify whether this p_sig is signed by pid
     auto msg = std::to_string(e);

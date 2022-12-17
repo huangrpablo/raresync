@@ -8,9 +8,13 @@
 #include "synchronizer.h"
 
 namespace raresync {
-class quad {
-public:
-    quad(int id, conf* conf, crypto_kit* crypto): id(id) {
+    typedef std::unique_ptr<boost::asio::io_service::work> ios_work_uptr;
+
+    class quad {
+    public:
+
+    quad(int id, conf* conf, crypto_kit* crypto):
+    id(id), crypto(crypto), work_(new io_service::work(ios)) {
 
         // init parameters
         fault_num = conf->fault_num;
@@ -32,14 +36,14 @@ public:
         }
 
         // init modules
-        view_core = core(id);
+        view_core = new core(id);
         view_core->with_peers(peer_ids);
-        view_core->with_crypto(crypto, peer_cryptos);
+        view_core->with_crypto(this->crypto, peer_cryptos);
         view_core->with_parameters(threshold);
 
-        view_synchronizer = synchronizer(ios, id);
+        view_synchronizer = new synchronizer(ios, id);
         view_synchronizer->with_peers(peer_ids);
-        view_synchronizer->with_crypto(crypto, peer_cryptos);
+        view_synchronizer->with_crypto(this->crypto, peer_cryptos);
         view_synchronizer->with_parameters(fault_num, threshold, conf->D, conf->d);
 
         // init network
@@ -54,8 +58,7 @@ public:
 
             net->add_peer(peer_conf->pid_,
                           peer_conf->address_,
-                          peer_conf->port_)
-            );
+                          peer_conf->port_);
         }
 
         // enable network in modules
@@ -65,9 +68,14 @@ public:
         view_synchronizer->with_core(view_core);
     }
 
-    void init(string& proposal) { view_core->init(proposal); }
+    void init(string proposal) { view_core->init(proposal); }
 
-    void start() { view_synchronizer->start(); }
+    void start() {
+        view_synchronizer->start();
+        ios.run();
+
+        LOG_INFO("quad[%d] io finishes", id);
+    }
 
 private:
     core* view_core;
@@ -77,11 +85,12 @@ private:
 
 private:
     io_service ios;
+    ios_work_uptr work_;
 
     int fault_num; int threshold;
 
     int id; vector<int> peer_ids;
-    peer_cryt_map peer_cryptos;
+    crypto_sptr crypto; peer_cryt_map peer_cryptos;
 };
 
 }

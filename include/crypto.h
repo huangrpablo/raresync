@@ -155,7 +155,7 @@ namespace raresync {
 #else
         size_t n = mclBnG1_getStr(&str[0], str.size(), &self_.v, ioMode);
 #endif
-        if (n == 0) throw std::runtime_error("Signature:tgetStr");
+        if (n == 0) throw std::runtime_error("Signature:getStr");
         str.resize(n);
         return str;
     }

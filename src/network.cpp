@@ -27,7 +27,7 @@ namespace raresync::network {
         }
 
         void start(const std::string& address, int port) final {
-            server_ = server::create(id_, address, port, ios_, synchronizer_);
+            server_ = server::create(id_, address, port, ios_, synchronizer_, core_);
             server_->start();
 
             io_thread_ = std::thread([this]() {this->ios_.run();});

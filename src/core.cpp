@@ -50,7 +50,8 @@ proto::message* core::vote_msg(proto::msg_type type, string value, proto::qcert 
 
     ostringstream os;
     os << int(msg->type) << "," << msg->value << "," << view;
-    msg->sig = crypto_->share_sign(os.str().c_str());
+
+    msg->siged = 1; msg->sig = crypto_->share_sign(os.str().c_str());
 
     return msg;
 }
@@ -88,6 +89,8 @@ void core::init(string proposal) {
 }
 
 void core::start_executing(int view) {
+    LOG_INFO("core[%d] starts executing view=%d", id_, view);
+
     {
         write_lock wl(mtx_);
         view_ = view;
@@ -97,6 +100,11 @@ void core::start_executing(int view) {
 }
 
 void core::send(proto::message *msg) {
+    LOG_INFO("core[%d] sends msg: type=%d, to=%d, view=%d", id_, int(msg->type), msg->to, msg->view);
+
+    auto chars = msg->to_raw_str();
+    auto m = new proto::message(&chars[0]);
+
     if (msg->to == id_) send_to_myself(msg);
 
     else {
@@ -144,6 +152,13 @@ void core::send_to_myself(proto::message *msg) {
 }
 
 void core::broadcast(proto::msg_type type, string proposal, proto::qcert *qc, int view) {
+    if (qc != nullptr)
+        LOG_INFO("core[%d] broadcast msg: type=%d, prop=%s, view=%d qc={type=%d, prop=%s, view=%d}",
+             id_, int(type), proposal.c_str(), view, int(qc->type), qc->value.c_str(), qc->view);
+    else
+        LOG_INFO("core[%d] broadcast msg: type=%d, prop=%s, view=%d qc={}",
+                 id_, int(type), proposal.c_str(), view);
+
     // send to my peers
     vector<proto::message*> msgs(peer_ids_.size());
 
@@ -152,6 +167,9 @@ void core::broadcast(proto::msg_type type, string proposal, proto::qcert *qc, in
         m->to = peer_ids_[i]; m->from = id_;
 
         msgs[i] = m;
+
+        auto chars = m->to_raw_str();
+        auto mt = new proto::message(&chars[0]);
     }
 
     net_->send(msgs);
@@ -159,7 +177,7 @@ void core::broadcast(proto::msg_type type, string proposal, proto::qcert *qc, in
 
 void core::prepare(int view) {
     // send prepare to the leader
-    proto::qcert* qc = nullptr;
+    proto::qcert* qc;
 
     {
         read_lock rl(mtx_);
@@ -175,6 +193,8 @@ void core::prepare(int view) {
 
 // 2f + 1 view-change messages received
 void core::on_leader_prepare(int view) {
+    LOG_INFO("core[%d] leader prepares: view=%d", id_, view);
+
     vector<proto::message*> msgs;
 
     {
@@ -192,7 +212,7 @@ void core::on_leader_prepare(int view) {
             highQC = msg->qc;
     }
 
-    string prop = highQC->value;
+    string prop = highQC == nullptr ? "" : highQC->value;
 
     if (prop.empty()) {
         read_lock rl(mtx_);
@@ -216,7 +236,8 @@ void core::on_process_prepare(int view, proto::message* msg) {
 
     if (!matching_msg(msg, proto::PREPARE, view)) return;
 
-    if (msg->qc->value != msg->value) return;
+    // todo: is the check necessary?
+    if (msg->qc != nullptr && msg->qc->value != msg->value) return;
 
     {
         read_lock rl(mtx_);
@@ -352,6 +373,8 @@ void core::decide(string& value) const {
 }
 
 void core::on_view_change_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives VIEW_CHANGE: pid=%d, view=%d", id_, msg->from, msg->view);
+
     if (leader(msg->view) != id_) return;
 
     int view;
@@ -384,6 +407,8 @@ void core::on_view_change_received(proto::message *msg) {
 }
 
 void core::on_prepare_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives PREPARE: pid=%d, view=%d", id_, msg->from, msg->view);
+
     int view;
 
     {
@@ -441,6 +466,8 @@ void core::on_prepare_received_as_process(int view, proto::message *msg) {
 }
 
 void core::on_precommit_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives PRECOMMIT: pid=%d, view=%d", id_, msg->from, msg->view);
+
     int view;
 
     {
@@ -495,7 +522,9 @@ void core::on_precommit_received_as_process(int view, proto::message* msg) {
     on_process_precommit(view, vote_msg);
 }
 
-void core::on_commit_received(const proto::message *msg) {
+void core::on_commit_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives COMMIT: pid=%d, view=%d", id_, msg->from, msg->view);
+
     int view;
 
     {
@@ -551,6 +580,8 @@ void core::on_commit_received_as_process(int view, proto::message *msg) {
 }
 
 void core::on_decide_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives DECIDE: pid=%d, view=%d", id_, msg->from, msg->view);
+
     int view;
 
     {

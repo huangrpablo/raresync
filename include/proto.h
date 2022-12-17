@@ -45,7 +45,8 @@ namespace raresync::proto {
         };
 
         struct message {
-            message() : type(EMPTY),to(0), from(0), epoch(-1), value("v"), view(-1), qc(nullptr) {}
+            message() : type(EMPTY),to(0), from(0), epoch(-1),
+            siged(0), value("v"), view(-1), qc(nullptr) {}
 
             message(char* encoded) {
                 istringstream is(encoded);
@@ -71,7 +72,10 @@ namespace raresync::proto {
                 epoch = atoi(token.c_str());
 
                 getline(is, token, ',');
-                from_str(token, sig);
+                siged = atoi(token.c_str());
+
+                getline(is, token, ',');
+                if (siged) from_str(token, sig);
 
                 getline(is, token, ',');
                 value = token;
@@ -108,7 +112,11 @@ namespace raresync::proto {
 
                 ostringstream os;
                 os << int(type) << "," << to << "," << from << ",";
-                os << epoch << "," << to_str(sig) << ",";
+                os << epoch << "," << siged << ",";
+
+                if (siged) os << to_str(sig);
+
+                os << ",";
                 os << value << "," << view;
 
                 if (qc == nullptr) return os.str();
@@ -125,7 +133,7 @@ namespace raresync::proto {
             }
 
             msg_type type; int to; int from;
-            int epoch; bsg sig;
+            int epoch; int siged; bsg sig;
 
             string value; int view; qcert* qc;
 

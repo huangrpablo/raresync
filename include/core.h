@@ -122,7 +122,7 @@ private:
 
     int leader(int view);
     void collect_garbage(int view, unordered_map<int, vector<proto::message*>>& todos);
-    void collect_garbage(int view, unordered_map<int, proto::message*>& todos);
+    static void collect_garbage(int view, unordered_map<int, proto::message*>& todos);
 };
 }
 
