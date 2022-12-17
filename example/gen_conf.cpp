@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     int N = 4;
     int K = 3;
     int fault_num = 1;
-    int D = 1;
+    int D = 8;
     int d = 1;
 
     string address = "127.0.0.1";

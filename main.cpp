@@ -54,7 +54,6 @@ void run_raresync_with_core(int id, conf* cf, crypto_kit* cry) {
     instance->start();
 }
 
-
 int main() {
     int n = 4; int k = 3; int f = 1;
 
@@ -68,11 +67,6 @@ int main() {
     auto crypto_lis = crypto_fac->create(ids);
 
     auto confs = new_confs(8, 1, n, f, crypto_lis);
-
-//    thread t1([&]() { run_raresync_instance(0, confs[0], crypto_lis[0]); });
-//    thread t2([&]() { run_raresync_instance(1, confs[1], crypto_lis[1]); });
-//    thread t3([&]() { run_raresync_instance(2, confs[2], crypto_lis[2]); });
-//    thread t4([&]() { run_raresync_instance(3, confs[3], crypto_lis[3]); });
 
     thread t1([&]() { run_raresync_with_core(0, confs[0], crypto_lis[0]); });
     thread t2([&]() { run_raresync_with_core(1, confs[1], crypto_lis[1]); });
