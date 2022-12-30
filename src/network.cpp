@@ -16,7 +16,8 @@ using namespace std;
 namespace raresync::network {
     class network_impl : public network {
     public:
-        explicit network_impl(callback* cb, int id) : cb_(cb), id_(id) {}
+        explicit network_impl(synchronizer_callback* synchronizer, core_callback* core, int id) :
+        synchronizer_(synchronizer), core_(core), id_(id) {}
 
         ~network_impl() final {
             if (io_thread_.joinable()) {
@@ -26,16 +27,16 @@ namespace raresync::network {
         }
 
         void start(const std::string& address, int port) final {
-            server_ = server::create(id_, address, port, ios_, cb_);
+            server_ = server::create(id_, address, port, ios_, synchronizer_, core_);
             server_->start();
 
             io_thread_ = std::thread([this]() {this->ios_.run();});
-            LOG_INFO("core[%d] network starts...", id_);
+            LOG_INFO("synchronizer[%d] network[%d] starts...", id_, port);
         }
 
         void stop() final {
             ios_.stop();
-            LOG_INFO("core[%d] network stops...", id_);
+            LOG_INFO("synchronizer[%d] network stops...", id_);
         }
 
         void send(std::vector<proto::message*>& msgs) final {
@@ -46,7 +47,6 @@ namespace raresync::network {
                         continue;
 
                     peers_[msgs[i]->to]->send(msgs[i]);
-//                    LOG_INFO("core[%d] sends msg to %d: %s", id_, msgs[i]->to, msgs[i]->to_log().c_str());
                 }
             };
 
@@ -77,11 +77,12 @@ namespace raresync::network {
         std::shared_mutex mtx_;
         unordered_map<int, peer_sptr> peers_;
         server_sptr server_;
-        callback* cb_;
+        synchronizer_callback* synchronizer_;
+        core_callback* core_;
     };
 
-    std::shared_ptr<network> network::create(callback* cb, int id) {
-        return std::make_shared<network_impl>(cb, id);
+    std::shared_ptr<network> network::create(synchronizer_callback* synchronizer, core_callback* core, int id) {
+        return std::make_shared<network_impl>(synchronizer, core, id);
     }
 }
 

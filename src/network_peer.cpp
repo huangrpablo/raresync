@@ -27,10 +27,10 @@ namespace raresync {
         void close_session();
 
         void send(proto::message* msg) {
-            auto bytes = msg->to_raw();
+            auto chars = msg->to_raw_str();
             auto pkt = new proto::packet();
-            pkt->body_length(bytes.size());
-            memcpy(pkt->body(), bytes.data(), pkt->body_length());
+            pkt->body_length(chars.size());
+            memcpy(pkt->body(), chars.data(), pkt->body_length());
             pkt->encode_header();
 
             {

@@ -1,327 +1,618 @@
 //
-// Created by 黄保罗 on 30.10.22.
+// Created by 黄保罗 on 09.12.22.
 //
 
 #include "core.h"
-#include <memory>
-#include "boost/asio.hpp"
-#include "log.h"
 
-using namespace boost::asio;
-using timer_error = boost::system::error_code;
+#include <utility>
+using namespace raresync;
 
-void raresync::core::init() {
-    if (inited_) return;
+proto::qcert* core::QC(vector<proto::message*> vote_messages) {
+    if (vote_messages.empty()) return nullptr;
 
-    inited_ = true;
+    auto qc = new proto::qcert();
 
-    f_ = conf_->f;
+    qc->type = vote_messages[0]->type;
+    qc->value = vote_messages[0]->value;
+    qc->view = vote_messages[0]->view;
 
-    auto self_conf = conf_->peer_confs[id_];
+    vector<bid> ids;
+    vector<bsg> sgs;
 
-    peer_cryts_ = peer_cryt_map();
-
-    for (auto & peer_conf : conf_->peer_confs) {
-        peer_cryts_[peer_conf->pid_] =
-                std::make_shared<peer_cryt>(
-                peer_cryt(peer_conf->pid_,
-                          peer_conf->bid_,
-                          peer_conf->pk_));
-
-        if (peer_conf->pid_ != id_)
-            peer_ids_.push_back(peer_conf->pid_);
+    for (auto vote_message: vote_messages) {
+        int peer = vote_message->from;
+        ids.push_back(peer_cryts_[peer]->id);
+        sgs.push_back(vote_message->sig);
     }
 
-    /* crypto */
+    qc->sig = crypto_->combine(ids, sgs, threshold_);
 
-    /* broadcast */
-    threshold_ = 2 * f_ + 1;
-    epoch_completed_ = std::map<int, std::map<int, bsg>>();
-
-    net_ = network::network::create(this, id_);
-    net_->start(self_conf->address_, self_conf->port_);
-
-    for (auto & peer_conf : conf_->peer_confs) {
-        if (peer_conf->pid_ != id_)
-            net_->add_peer(
-                    peer_conf->pid_,
-                    peer_conf->address_,
-                    peer_conf->port_
-                    );
-    }
-
-    /* asio service */
-    view_duration_ = boost::asio::chrono::seconds(conf_->D + 2 * conf_->d);
-    dissemination_duration_ = boost::asio::chrono::seconds(conf_->d);
+    return qc;
 }
 
-void raresync::core::start() {
-    if (started_) return;
+proto::message* core::msg(proto::msg_type type, string value, proto::qcert *qc, int view) {
+    auto msg = new proto::message();
+    msg->type = type;
+    msg->value = std::move(value);
+    msg->qc = qc;
+    msg->view = view;
 
-    started_ = true;
+    return msg;
+}
+
+proto::message* core::vote_msg(proto::msg_type type, string value, proto::qcert *qc, int view) {
+    auto msg = new proto::message();
+
+    msg->type = type;
+    msg->value = std::move(value);
+    msg->qc = qc;
+    msg->view = view;
+
+    ostringstream os;
+    os << int(msg->type) << "," << msg->value << "," << view;
+
+    msg->siged = 1; msg->sig = crypto_->share_sign(os.str().c_str());
+
+    return msg;
+}
+
+bool core::verify_msg(proto::message *vote_msg) {
+    if (!peer_cryts_.count(vote_msg->from))
+        return false;
+
+    ostringstream os;
+    os << int(vote_msg->type) << "," << vote_msg->value << "," << vote_msg->view;
+    return peer_cryts_[vote_msg->from]->share_verify(os.str().c_str(), vote_msg->sig);
+}
+
+bool core::verify_qc(proto::qcert *qc) {
+    ostringstream os;
+    os << int(qc->type) << "," << qc->value << "," << qc->view;
+    return crypto_->combine_verify(os.str().c_str(), qc->sig);
+}
+
+bool core::matching_msg(proto::message *msg, proto::msg_type type, int view) {
+    return msg->type == type && msg->view == view;
+}
+
+bool core::matching_qc(proto::qcert *qc, proto::msg_type type, int view) {
+    return qc->type == type && qc->view == view;
+}
+
+int core::leader(int view) {
+    return view % peer_cryts_.size();
+}
+
+// Pi’s proposal
+void core::init(string proposal) {
+    this->proposal = new string(std::move(proposal));
+}
+
+void core::start_executing(int view) {
+    LOG_INFO("core[%d] starts executing view=%d", id_, view);
 
     {
-        write_lock wl(vesmtx_);
-        epoch_ = 1;
-        view_ = 1;
+        write_lock wl(mtx_);
+        view_ = view;
     }
 
-    LOG_INFO("core[%d] starts: epoch=%d, view=%d", id_, 1, 1);
-
-    /* run asio service */
-
-    /* set the timers */
-    // measure the duration of the first view
-    measure_view_timer();
-
-    /* enter the view */
-    // enter the first view
-    advance(1);
-    ios_.run();
+    prepare(view);
 }
 
-void raresync::core::stop() {
+void core::send(proto::message *msg) {
+    LOG_INFO("core[%d] sends msg: type=%d, to=%d, view=%d", id_, int(msg->type), msg->to, msg->view);
 
-}
+    auto chars = msg->to_raw_str();
+    auto m = new proto::message(&chars[0]);
 
-rs_errno raresync::core::advance(int view) const {
-    // do something
-    LOG_INFO("core[%d] advances epoch=%d, view=%d", id_, epoch_, view);
+    if (msg->to == id_) send_to_myself(msg);
 
-    return GOOD;
-}
-
-void raresync::core::measure_view_timer() {
-    view_timer_.expires_from_now(view_duration_);
-    view_timer_.async_wait([this](const timer_error &e) {
-        on_view_timer_expired();
-    });
-
-    LOG_INFO("core[%d] measures a view timer", id_);
-}
-
-void raresync::core::measure_dissemination_timer() {
-    dissemination_timer_.expires_from_now(dissemination_duration_);
-    dissemination_timer_.async_wait([this](const timer_error &e) {
-        on_dissemination_timer_expired();
-    });
-
-    LOG_INFO("core[%d] measures a dissemination timer", id_);
-}
-
-void raresync::core::on_view_timer_expired() {
-    LOG_INFO("core[%d] view timer expired", id_);
-
-    int view; int epoch;
-    {
-        write_lock wl(vesmtx_);
-        view = view_;
-        epoch = epoch_;
-
-        // check if the current view is not the last view of the current epoch
-        if (view < f_ + 1) view_++;
+    else {
+        vector<proto::message*> msgs({msg});
+        net_->send(msgs);
     }
-
-    // check if the current view is not the last view of the current epoch
-    if (view < f_ + 1) {
-        int view_to_advance = (epoch - 1) * (f_ + 1) + (view+1);
-
-        // measure the duration of the view
-        measure_view_timer();
-
-        // enter the next view
-        advance(view_to_advance);
-        return;
-    }
-
-    // inform other processes that the epoch is completed
-    auto msg = std::to_string(epoch);
-    bsg p_sig = crypto_->share_sign(msg.c_str());
-
-    // store locally first
-    {
-        write_lock wl(ecmplmtx_);
-        if (!epoch_completed_.count(epoch))
-            epoch_completed_[epoch] = std::map<int, bsg>();
-
-        epoch_completed_[epoch][id_] = p_sig;
-    }
-
-    // broadcast to the rest
-    broadcast_epoch_completion(epoch, p_sig);
 }
 
-void raresync::core::on_dissemination_timer_expired() {
-    LOG_INFO("core[%d] dissemination timer expired", id_);
+void core::send_to_myself(proto::message *msg) {
+    int view = msg->view;
 
-    int epoch;
-    bsg epoch_sig;
-    {
-        read_lock rv(vesmtx_);
-        epoch = epoch_;
-        epoch_sig = epoch_sig_;
+    switch (msg->type) {
+        case proto::VIEW_CHANGE: {
+            write_lock wl(vcmtx_);
+            if (!view_change_todos_.count(view))
+                view_change_todos_[view] = vector<proto::message*>();
+
+            view_change_todos_[view].push_back(msg);
+        } break;
+
+        case proto::PREPARE: {
+            write_lock wl(prepmtx_);
+            if (!prepare_todos_.count(view))
+                prepare_todos_[view] = vector<proto::message*>();
+
+            prepare_todos_[view].push_back(msg);
+        } break;
+
+        case proto::PRE_COMMIT: {
+            write_lock wl(precmtmtx_);
+            if (!precommit_todos_.count(view))
+                precommit_todos_[view] = vector<proto::message*>();
+
+            precommit_todos_[view].push_back(msg);
+        } break;
+
+        case proto::COMMIT: {
+            write_lock wl(cmmtx_);
+            if (!commit_todos_.count(view))
+                commit_todos_[view] = vector<proto::message*>();
+
+            commit_todos_[view].push_back(msg);
+        } break;
     }
-
-    broadcast_epoch_entrance(epoch, epoch_sig);
-
-    // reset the current view to 1
-    {
-        write_lock wl(vesmtx_);
-        view_ = 1;
-    }
-
-    int view_to_advance = (epoch - 1) * (f_ + 1) + 1;
-
-    // measure the duration of the view
-    measure_view_timer();
-
-    // enter the first view of the new epoch
-    advance(view_to_advance);
 }
 
-void raresync::core::broadcast(proto::msg_type type, int e, bsg sig) {
-    auto sig_hex = serialize(sig);
+void core::broadcast(proto::msg_type type, string proposal, proto::qcert *qc, int view) {
+    if (qc != nullptr)
+        LOG_INFO("core[%d] broadcast msg: type=%d, prop=%s, view=%d qc={type=%d, prop=%s, view=%d}",
+             id_, int(type), proposal.c_str(), view, int(qc->type), qc->value.c_str(), qc->view);
+    else
+        LOG_INFO("core[%d] broadcast msg: type=%d, prop=%s, view=%d qc={}",
+                 id_, int(type), proposal.c_str(), view);
 
-    std::vector<proto::message*> msgs(peer_ids_.size());
+    // send to my peers
+    vector<proto::message*> msgs(peer_ids_.size());
+
     for (int i = 0; i < peer_ids_.size(); i++) {
-        auto msg = new proto::message();
-        msg->type = type;
-        msg->to = peer_ids_[i];
-        msg->from = id_;
-        msg->epoch = e;
-        msg->sig_sz = sig_hex.size();
-        msg->sig_hex = sig_hex;
+        auto m = msg(type, proposal, qc, view);
+        m->to = peer_ids_[i]; m->from = id_;
 
-        msgs[i] = msg;
+        msgs[i] = m;
+
+        auto chars = m->to_raw_str();
+        auto mt = new proto::message(&chars[0]);
     }
 
-    LOG_DEBUG("code[%d] ready to sends", id_);
     net_->send(msgs);
 }
 
-void raresync::core::broadcast_epoch_completion(int e, bsg p_sig) {
-    LOG_INFO("core[%d] broadcasts EPOCH_COMPLETION: epoch=%d", id_, e);
+void core::prepare(int view) {
+    // send prepare to the leader
+    proto::qcert* qc;
 
-    broadcast(proto::EPOCH_COMPLETION, e, p_sig);
+    {
+        read_lock rl(mtx_);
+        qc = prepareQC;
+    }
+
+    auto m = msg(proto::VIEW_CHANGE, "", qc, view);
+    m->to = leader(view); m->from = id_;
+
+    // send it to the leader
+    send(m);
 }
 
-void raresync::core::broadcast_epoch_entrance(int e, bsg t_sig) {
-    LOG_INFO("core[%d] broadcasts EPOCH_ENTRANCE: epoch=%d", id_, e);
+// 2f + 1 view-change messages received
+void core::on_leader_prepare(int view) {
+    LOG_INFO("core[%d] leader prepares: view=%d", id_, view);
 
-    broadcast(proto::EPOCH_ENTRANCE, e, t_sig);
+    vector<proto::message*> msgs;
+
+    {
+        read_lock rl(vcmtx_);
+        msgs = view_change_todos_[view];
+    }
+
+    while (msgs.size() > threshold_)
+        msgs.pop_back();
+
+    proto::qcert* highQC = nullptr;
+
+    for (auto msg : msgs) {
+        if (highQC == nullptr || msg->qc->view > highQC->view)
+            highQC = msg->qc;
+    }
+
+    string prop = highQC == nullptr ? "" : highQC->value;
+
+    if (prop.empty()) {
+        read_lock rl(mtx_);
+        if (proposal != nullptr)
+            prop = *proposal;
+    }
+
+    // broadcast to peers
+    broadcast(proto::PREPARE, prop, highQC, view);
+
+    // execute as a process
+    auto m = msg(proto::PREPARE, prop, highQC, view);
+    m->to = id_; m->from = id_;
+
+    on_process_prepare(view, m);
 }
 
+// every process executes this part of the pseudocode
+void core::on_process_prepare(int view, proto::message* msg) {
+    if (leader(view) != msg->from) return;
 
-void raresync::core::on_epoch_entrance_received(int pid, int e, bsg t_sig) {
-    LOG_INFO("core[%d] receives EPOCH_ENTRANCE: pid=%d, epoch=%d", pid, id_, e);
+    if (!matching_msg(msg, proto::PREPARE, view)) return;
 
-    // verify whether this t_sig is combined from 2f+1 peers
-    auto msg = std::to_string(e);
-    if (!crypto_->combine_verify(msg.c_str(), t_sig)) return;
+    // todo: is the check necessary?
+    if (msg->qc != nullptr && msg->qc->value != msg->value) return;
 
     {
-        write_lock wv(vesmtx_);
-        if (epoch_ >= e) return;
-
-        epoch_ = e;
-        // t_sig is a threshold signature of epoch e − 1
-        epoch_sig_ = t_sig;
+        read_lock rl(mtx_);
+        if (
+                lockedQC != nullptr
+                && lockedQC->value != msg->value
+                && msg->qc->view <= lockedQC->view
+                )
+            return;
     }
 
-    view_timer_.cancel();
-    dissemination_timer_.cancel();
+    auto m = vote_msg(proto::PREPARE, msg->value, nullptr, view);
+    m->to = leader(view); m->from = id_;
 
-    // wait δ time before broadcasting enter-epoch
-    measure_dissemination_timer();
+    send(m);
 }
 
-void raresync::core::on_epoch_completion_received(int pid, int e, bsg p_sig) {
-    LOG_INFO("core[%d] receives EPOCH_COMPLETION: pid=%d, epoch=%d", pid, id_, e);
-
-    // verify whether this p_sig is signed by pid
-    auto msg = std::to_string(e);
-    if (!peer_cryts_.count(pid) ||
-    !peer_cryts_[pid]->share_verify(msg.c_str(), p_sig)) {
-        LOG_INFO("verify signature fails");
-        return;
-    }
-
-    int epoch;
-    {
-        read_lock rv(vesmtx_);
-        epoch = epoch_;
-
-        if (epoch > e) return;
-    }
+void core::on_leader_precommit(int view) {
+    vector<proto::message*> vote_msgs;
 
     {
-        write_lock wec(ecmplmtx_);
-        if (!epoch_completed_.count(e))
-            epoch_completed_[e] = std::map<int, bsg>();
-
-        epoch_completed_[e][pid] = p_sig;
+        read_lock rl(prepmtx_);
+        vote_msgs = prepare_todos_[view];
     }
 
-    int new_epoch;
-    bsg new_epoch_sig;
-    bool found = false;
+    while (vote_msgs.size() > threshold_)
+        vote_msgs.pop_back();
 
-    {
-        read_lock rec(ecmplmtx_);
+    auto qc = QC(vote_msgs);
 
-        for (auto & it : epoch_completed_) {
-            if (
-                    it.first < epoch ||
-                    it.second.size() < threshold_
-            )
-                continue;
+    // broadcast to peers
+    broadcast(proto::PRE_COMMIT, "", qc, view);
 
-            std::vector<bid> ids(threshold_);
-            std::vector<bsg> sgs(threshold_);
+    // execute as a process
+    auto m = msg(proto::PRE_COMMIT, "", qc, view);
+    m->to = id_; m->from = id_;
 
-            auto iit = it.second.begin();
-            for (int i = 0; i < threshold_; i++, iit++) {
-                ids[i] = peer_cryts_[iit->first]->id;
-                sgs[i] = iit->second;
-            }
-
-            LOG_INFO("core[%d] collects {EPOCH_COMPLETION}{%d} from %d peers", id_, it.first, it.second.size());
-
-            new_epoch = it.first + 1;
-            new_epoch_sig = crypto_->combine(ids, sgs, threshold_);
-            found = true;
-            break;
-        }
-    }
-
-    if (!found) return;
-
-    {
-        write_lock wv(vesmtx_);
-        epoch_ = new_epoch;
-        epoch_sig_ = new_epoch_sig;
-    }
-
-    if (gc) collect_garbage(new_epoch);
-
-    view_timer_.cancel();
-    dissemination_timer_.cancel();
-    // wait δ time before broadcasting enter-epoch
-    measure_dissemination_timer();
+    on_process_precommit(view, m);
 }
 
-void raresync::core::collect_garbage(int e) {
-    // erase old epochs in epoch_completed list
+void core::on_process_precommit(int view, proto::message *msg) {
+    if (leader(view) != msg->from) return;
+
+    if (!matching_qc(msg->qc, proto::PREPARE, view)) return;
+
+    if (!verify_qc(msg->qc)) return;
+
     {
-        write_lock wl(ecmplmtx_);
-        std::vector<int> obsoletes;
-
-        for (auto & it : epoch_completed_) {
-            if (it.first < e)
-                obsoletes.push_back(it.first);
-        }
-
-        for (auto obsolete : obsoletes)
-            epoch_completed_.erase(obsolete);
+        write_lock wl(mtx_);
+        prepareQC = msg->qc;
     }
+
+    auto m = vote_msg(proto::PRE_COMMIT, msg->qc->value, nullptr, view);
+    m->to = leader(view); m->from = id_;
+
+    send(m);
 }
+
+void core::on_leader_commit(int view) {
+    vector<proto::message*> vote_msgs;
+
+    {
+        read_lock rl(precmtmtx_);
+        vote_msgs = precommit_todos_[view];
+    }
+
+    while (vote_msgs.size() > threshold_)
+        vote_msgs.pop_back();
+
+    auto qc = QC(vote_msgs);
+
+    // broadcast to peers
+    broadcast(proto::COMMIT, "", qc, view);
+
+    // execute as a process
+    auto m = msg(proto::COMMIT, "", qc, view);
+    m->to = id_; m->from = id_;
+
+    on_process_commit(view, m);
+}
+
+void core::on_process_commit(int view, proto::message *msg) {
+    if (leader(view) != msg->from) return;
+
+    if (!matching_qc(msg->qc, proto::PRE_COMMIT, view)) return;
+
+    if (!verify_qc(msg->qc)) return;
+
+    {
+        write_lock wl(mtx_);
+        lockedQC = msg->qc;
+    }
+
+    auto m = vote_msg(proto::COMMIT, msg->qc->value, nullptr, view);
+    m->to = leader(view); m->from = id_;
+
+    send(m);
+}
+
+void core::on_leader_decide(int view) {
+    vector<proto::message*> vote_msgs;
+
+    {
+        read_lock rl(cmmtx_);
+        vote_msgs = commit_todos_[view];
+    }
+
+    while (vote_msgs.size() > threshold_)
+        vote_msgs.pop_back();
+
+    auto qc = QC(vote_msgs);
+
+    broadcast(proto::DECIDE, "", qc, view);
+
+    auto m = msg(proto::DECIDE, "", qc, view);
+    m->to = id_; m->from = id_;
+
+    on_process_decide(view, m);
+}
+
+void core::on_process_decide(int view, proto::message *msg) {
+    if (leader(view) != msg->from) return;
+
+    if (!matching_qc(msg->qc, proto::COMMIT, view)) return;
+
+    if (!verify_qc(msg->qc)) return;
+
+    decide(msg->qc->value);
+}
+
+void core::decide(string& value) const {
+    LOG_INFO("core[%d] decides value=%s", id_, value.c_str());
+}
+
+void core::on_view_change_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives VIEW_CHANGE: pid=%d, view=%d", id_, msg->from, msg->view);
+
+    if (leader(msg->view) != id_) return;
+
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(vcmtx_);
+        if (!view_change_todos_.count(msg->view))
+            view_change_todos_[msg->view] = vector<proto::message*>();
+
+        view_change_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, view_change_todos_);
+
+        // todo: might be buggy
+        // make sure given a view, on_leader_prepare only called once
+        threshold_reached = msg->view == view
+                && view_change_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_prepare(view);
+}
+
+void core::on_prepare_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives PREPARE: pid=%d, view=%d", id_, msg->from, msg->view);
+
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    if (leader(msg->view) == id_)
+        on_prepare_received_as_leader(view, msg);
+    else
+        on_prepare_received_as_process(view, msg);
+}
+
+// prepare vote_msgs from peers
+void core::on_prepare_received_as_leader(int view, proto::message *msg) {
+    if (!verify_msg(msg)) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(prepmtx_);
+        if (!prepare_todos_.count(msg->view))
+            prepare_todos_[msg->view] = vector<proto::message*>();
+
+        prepare_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, prepare_todos_);
+
+        threshold_reached = msg->view == view
+                && prepare_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_precommit(view);
+}
+
+// prepare msg from leader -> return vote_msg to leader
+void core::on_prepare_received_as_process(int view, proto::message *msg) {
+    proto::message* vote_msg;
+
+    {
+        write_lock wl(prepmtx_);
+        process_prepare_todos_[msg->view] = msg;
+
+        collect_garbage(view, process_prepare_todos_);
+
+        if (!process_prepare_todos_.count(view)) return;
+
+        vote_msg = process_prepare_todos_[view];
+        process_prepare_todos_.erase(view);
+    }
+
+    on_process_prepare(view, vote_msg);
+}
+
+void core::on_precommit_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives PRECOMMIT: pid=%d, view=%d", id_, msg->from, msg->view);
+
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    if (leader(msg->view) == id_)
+        on_precommit_received_as_leader(view, msg);
+    else
+        on_precommit_received_as_process(view, msg);
+}
+
+void core::on_precommit_received_as_leader(int view, proto::message *msg) {
+    if (!verify_msg(msg)) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(precmtmtx_);
+        if (!precommit_todos_.count(msg->view))
+            precommit_todos_[msg->view] = vector<proto::message*>();
+
+        precommit_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, precommit_todos_);
+
+        threshold_reached = msg->view == view
+                && precommit_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_commit(view);
+}
+
+void core::on_precommit_received_as_process(int view, proto::message* msg) {
+    proto::message* vote_msg;
+
+    {
+        write_lock wl(precmtmtx_);
+        process_precommit_todos_[msg->view] = msg;
+
+        collect_garbage(view, process_precommit_todos_);
+
+        if (!process_precommit_todos_.count(view)) return;
+
+        vote_msg = process_precommit_todos_[view];
+        process_precommit_todos_.erase(view);
+    }
+
+    on_process_precommit(view, vote_msg);
+}
+
+void core::on_commit_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives COMMIT: pid=%d, view=%d", id_, msg->from, msg->view);
+
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    if (leader(msg->view) == id_)
+        on_commit_received_as_leader(view, msg);
+    else
+        on_commit_received_as_process(view, msg);
+}
+
+void core::on_commit_received_as_leader(int view, proto::message *msg) {
+    if (!verify_msg(msg)) return;
+
+    bool threshold_reached;
+
+    {
+        write_lock wl(cmmtx_);
+        if (!commit_todos_.count(msg->view))
+            commit_todos_[msg->view] = vector<proto::message*>();
+
+        commit_todos_[msg->view].push_back(msg);
+
+        collect_garbage(view, commit_todos_);
+
+        threshold_reached = msg->view == view
+                && commit_todos_[view].size() == threshold_;
+    }
+
+    if (threshold_reached) on_leader_decide(view);
+}
+
+void core::on_commit_received_as_process(int view, proto::message *msg) {
+    proto::message* vote_msg;
+
+    {
+        write_lock wl(cmmtx_);
+        process_commit_todos_[msg->view] = msg;
+
+        collect_garbage(view, process_commit_todos_);
+
+        if (!process_commit_todos_.count(view)) return;
+
+        vote_msg = process_commit_todos_[view];
+        process_commit_todos_.erase(view);
+    }
+
+    on_process_commit(view, vote_msg);
+}
+
+void core::on_decide_received(proto::message *msg) {
+    LOG_INFO("core[%d] receives DECIDE: pid=%d, view=%d", id_, msg->from, msg->view);
+
+    int view;
+
+    {
+        read_lock rl(mtx_);
+        view = view_;
+    }
+
+    if (msg->view < view) return;
+
+    on_process_decide(view, msg);
+}
+
+void core::collect_garbage(int view, unordered_map<int, proto::message*> &todos) {
+    vector<int> obsoletes;
+    for (auto & it : todos) {
+        if (it.first < view)
+            obsoletes.push_back(it.first);
+    }
+
+    for (auto obsolete : obsoletes)
+        todos.erase(obsolete);
+}
+
+void core::collect_garbage(int view, unordered_map<int, vector<proto::message *>> &todos) {
+    vector<int> obsoletes;
+    for (auto & it : todos) {
+        if (it.first < view)
+            obsoletes.push_back(it.first);
+    }
+
+    for (auto obsolete : obsoletes)
+        todos.erase(obsolete);
+}
+

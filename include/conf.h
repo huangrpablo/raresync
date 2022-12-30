@@ -32,7 +32,7 @@ namespace raresync {
         int D;
         int d;
         /* # of nodes can fail */
-        int f;
+        int fault_num;
 
         std::vector<peer_conf_sptr> peer_confs;
     };

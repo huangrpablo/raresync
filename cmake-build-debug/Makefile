@@ -129,6 +129,54 @@ raresync/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/build
 .PHONY : raresync/fast
 
+example/gen_conf.o: example/gen_conf.cpp.o
+.PHONY : example/gen_conf.o
+
+# target to build an object file
+example/gen_conf.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/example/gen_conf.cpp.o
+.PHONY : example/gen_conf.cpp.o
+
+example/gen_conf.i: example/gen_conf.cpp.i
+.PHONY : example/gen_conf.i
+
+# target to preprocess a source file
+example/gen_conf.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/example/gen_conf.cpp.i
+.PHONY : example/gen_conf.cpp.i
+
+example/gen_conf.s: example/gen_conf.cpp.s
+.PHONY : example/gen_conf.s
+
+# target to generate assembly for a file
+example/gen_conf.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/example/gen_conf.cpp.s
+.PHONY : example/gen_conf.cpp.s
+
+example/run_instance.o: example/run_instance.cpp.o
+.PHONY : example/run_instance.o
+
+# target to build an object file
+example/run_instance.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/example/run_instance.cpp.o
+.PHONY : example/run_instance.cpp.o
+
+example/run_instance.i: example/run_instance.cpp.i
+.PHONY : example/run_instance.i
+
+# target to preprocess a source file
+example/run_instance.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/example/run_instance.cpp.i
+.PHONY : example/run_instance.cpp.i
+
+example/run_instance.s: example/run_instance.cpp.s
+.PHONY : example/run_instance.s
+
+# target to generate assembly for a file
+example/run_instance.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raresync.dir/build.make CMakeFiles/raresync.dir/example/run_instance.cpp.s
+.PHONY : example/run_instance.cpp.s
+
 main.o: main.cpp.o
 .PHONY : main.o
 
@@ -258,6 +306,12 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... raresync"
+	@echo "... example/gen_conf.o"
+	@echo "... example/gen_conf.i"
+	@echo "... example/gen_conf.s"
+	@echo "... example/run_instance.o"
+	@echo "... example/run_instance.i"
+	@echo "... example/run_instance.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
